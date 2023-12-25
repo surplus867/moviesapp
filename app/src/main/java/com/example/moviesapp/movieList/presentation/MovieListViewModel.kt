@@ -21,12 +21,15 @@ class MovieListViewModel @Inject constructor(
     val movieListState = _movieListState.asStateFlow()
 
     init {
+        // Fetch popular and upcoming movie lists during ViewModel initialization
         getPoplarMovieList(false)
         getUpcomingMovieList(false)
     }
 
+    // Function to handle UI events
     fun onEvent(event: MovieListUiEvent) {
         when (event) {
+            // Toggle between popular and upcoming screens
             MovieListUiEvent.Navigate -> {
                 _movieListState.update {
                     it.copy(
@@ -35,6 +38,7 @@ class MovieListViewModel @Inject constructor(
                 }
             }
 
+            // Paginate event triggers fetching more items
             is MovieListUiEvent.Paginate -> {
                 if (event.category == Category.POPULAR) {
                     getPoplarMovieList(true)
@@ -45,6 +49,7 @@ class MovieListViewModel @Inject constructor(
         }
     }
 
+    // Function to fetch upcoming movie list
     private fun getPoplarMovieList(forceFetchFromRemote: Boolean) {
         viewModelScope.launch {
             _movieListState.update {
@@ -85,6 +90,7 @@ class MovieListViewModel @Inject constructor(
         }
     }
 
+    // Common function to handle movie list result and update state
     private fun getUpcomingMovieList(forceFetchFromRemote: Boolean) {
         viewModelScope.launch {
             _movieListState.update {

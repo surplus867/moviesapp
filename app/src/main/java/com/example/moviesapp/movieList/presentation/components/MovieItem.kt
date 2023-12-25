@@ -50,7 +50,7 @@ import com.example.moviesapp.movieList.util.getAverageColor
 @Composable
 fun MovieItem(
     movie: Movie, // Movie data to display
-    navHostController: NavController // Navigation controller for navigating to other screens
+    navHostController: NavHostController // Navigation controller for navigating to other screens
 ) {
     // Use Coil's rememberAsyncImagePainter to asynchronously load and display the movie backdrop image
     val imageState = rememberAsyncImagePainter(
@@ -85,7 +85,7 @@ fun MovieItem(
             )
             .clickable {
                 // Navigate to the movie details screen when clicked
-                navHostController.navigate(Screen.Details.rout + "${movie.id}")
+                navHostController.navigate(Screen.Details.rout + "/${movie.id}")
             }
     ) {
         // Display a placeholder if there is an error loading the image
@@ -130,7 +130,7 @@ fun MovieItem(
 
         // Display the movie title
         Text(
-            modifier = Modifier.padding(start = 26.dp, end = 8.dp),
+            modifier = Modifier.padding(start = 16.dp, end = 8.dp),
             text = movie.title,
             color = Color.White,
             fontSize = 15.sp,
