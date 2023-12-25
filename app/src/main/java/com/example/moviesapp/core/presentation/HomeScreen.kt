@@ -28,7 +28,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -36,27 +35,38 @@ import androidx.navigation.compose.rememberNavController
 import com.example.moviesapp.R
 import com.example.moviesapp.movieList.presentation.MovieListUiEvent
 import com.example.moviesapp.movieList.presentation.MovieListViewModel
+import com.example.moviesapp.movieList.presentation.PopularMoviesScreen
+import com.example.moviesapp.movieList.presentation.UpcomingMoviesScreen
 import com.example.moviesapp.movieList.util.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(navController: NavHostController) {
+    // Obtain ViewModel for movie list
     val movieListViewModel = hiltViewModel<MovieListViewModel>()
-    val movieState = movieListViewModel.movieListState.collectAsState().value
+
+    // Collect the current state of the movie list
+    val movieListState = movieListViewModel.movieListState.collectAsState().value
+
+    // Create a NavController for the bottom navigation
     val bottomNavController = rememberNavController()
 
+    // Build the UI using Scaffold
     Scaffold(
         bottomBar = {
+            // Display the custom BottomNavigationBar
             BottomNavigationBar(
+
                 bottomNavController = bottomNavController,
                 onEvent = movieListViewModel::onEvent
             )
         },
         topBar = {
+            // Display the TopAppBar with the title based on the current state
             TopAppBar(
                 title = {
                     Text(
-                        text = if (movieState.isCurrentPopularScreen)
+                        text = if (movieListState.isCurrentPopularScreen)
                             stringResource(R.string.popular_movies)
                         else
                             stringResource(R.string.upcoming_movies),
@@ -70,20 +80,30 @@ fun HomeScreen(navController: NavController) {
             )
         }
     ) {
+        // Main content area within the Box
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(it)
         ) {
+            // Navigation host for handling different destinations
             NavHost(
                 navController = bottomNavController,
                 startDestination = Screen.PopularMovieList.rout
             ) {
                 composable(Screen.PopularMovieList.rout) {
-                    //          PopularMovieScreen()
+                    PopularMoviesScreen(
+                        navController = navController,
+                        movieListState = movieListState,
+                        onEvent = movieListViewModel::onEvent
+                    )
                 }
-                composable(Screen.PopularMovieList.rout) {
-                    //         PopularMovieScreen()
+                composable(Screen.UpcomingMovieList.rout) {
+                    UpcomingMoviesScreen(
+                        navController = navController,
+                        movieListState = movieListState,
+                        onEvent = movieListViewModel::onEvent
+                    )
                 }
             }
         }
