@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
@@ -43,7 +44,7 @@ import com.minyu.moviesapp.movieList.data.remote.MovieApi
 import com.minyu.moviesapp.movieList.util.RatingBar
 
 @Composable
-fun DetailsScreen() {
+fun DetailsScreen(navController: NavController) {
 
     // Obtain the DetailsViewModel using Hilt dependency injection
     val detailsViewModel = hiltViewModel<DetailsViewModel>()
@@ -221,6 +222,7 @@ fun DetailsScreen() {
                                 title = movie.title,
                                 posterUrl = movie.poster_path
                             )
+                            navController.navigate("favorite_movies")
                         }
                     ) {
                         Text("Add to Favorites")

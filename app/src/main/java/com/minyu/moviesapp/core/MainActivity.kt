@@ -20,6 +20,8 @@ import com.minyu.moviesapp.details.presentation.DetailsScreen
 import com.minyu.moviesapp.movieList.util.Screen
 import com.minyu.moviesapp.ui.theme.MoviesappTheme
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.minyu.moviesapp.details.presentation.FavoriteMoviesScreen
+import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -51,7 +53,12 @@ class MainActivity : ComponentActivity() {
                                 navArgument("movieId") { type = NavType.IntType }
                             )
                         ) {
-                            DetailsScreen()
+                            DetailsScreen(navController)
+                        }
+                        composable("favorite_movies") {
+                            // If using Hilt for ViewModel
+                            val viewModel = androidx.hilt.navigation.compose.hiltViewModel<FavoriteMoviesViewModel>()
+                            FavoriteMoviesScreen(viewModel)
                         }
                     }
                 }
