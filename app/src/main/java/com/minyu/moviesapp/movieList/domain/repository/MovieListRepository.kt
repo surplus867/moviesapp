@@ -12,4 +12,5 @@ interface MovieListRepository {
     ) : Flow<Resource<List<Movie>>>
 
     suspend fun getMovie(id: Int): Flow<Resource<Movie>>
+    suspend fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String)
 }

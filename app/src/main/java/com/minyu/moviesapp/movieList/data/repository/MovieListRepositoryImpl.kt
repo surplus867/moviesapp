@@ -1,6 +1,8 @@
 package com.minyu.moviesapp.movieList.data.repository
 
 
+import android.R.attr.id
+import com.minyu.moviesapp.movieList.data.local.entity.FavoriteMovieEntity
 import com.minyu.moviesapp.movieList.data.local.movie.MovieDatabase
 import com.minyu.moviesapp.movieList.data.mappers.toMovie
 import com.minyu.moviesapp.movieList.data.mappers.toMovieEntity
@@ -30,7 +32,10 @@ class MovieListRepositoryImpl @Inject constructor(
             emit(Resource.Loading(true))
 
             // Try fetching movies from the local database
-            val localMovieList = movieDatabase.movieDao.getMovieListByCategory(category)
+            val localMovieList = movieDatabase.movieDao().getMovieListByCategory(category)
+
+            val movieEntity = movieDatabase.movieDao().getMovieById(id)
+
 
             // Check if local data should be used and emit the result
             val shouldLoadLocalMovie = localMovieList.isNotEmpty() && !forceFetchFromRemote
@@ -73,7 +78,7 @@ class MovieListRepositoryImpl @Inject constructor(
                 }
             }
 
-            movieDatabase.movieDao.upsertMovieList(movieEntities)
+            movieDatabase.movieDao().upsertMovieList(movieEntities)
 
             // Emit the transformed data to the UI
             emit(Resource.Success(
@@ -90,7 +95,7 @@ class MovieListRepositoryImpl @Inject constructor(
             emit(Resource.Loading(true))
 
             // Try fetching the movie from the local database
-            val movieEntity = movieDatabase.movieDao.getMovieById(id)
+            val movieEntity = movieDatabase.movieDao().getMovieById(id)
 
             // Check if the movie was found in the local database and emit the result
             if(movieEntity != null) {
@@ -110,4 +115,13 @@ class MovieListRepositoryImpl @Inject constructor(
             emit(Resource.Loading(false))
         }
     }
+
+  override suspend fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String) {
+      val favoriteMovieEntity = FavoriteMovieEntity(
+          movieId = movieId,
+          title = title,
+          posterUrl = posterUrl
+      )
+      movieDatabase.favoriteMovieDao().insertFavoriteMovie(favoriteMovieEntity)
+  }
 }

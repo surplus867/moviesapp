@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ImageNotSupported
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -209,6 +210,21 @@ fun DetailsScreen() {
                         modifier = Modifier.padding(start = 16.dp),
                         text = "${movie.release_date} ${stringResource(R.string.votes)}"
                     )
+
+                    // Add to Favorites Button
+                    Button(
+                        modifier = Modifier.padding(start = 16.dp, top = 12.dp),
+                        enabled = detailsState.movie.title.isNotBlank(),
+                        onClick = {
+                            detailsViewModel.addFavoriteMovie(
+                                movieId = movie.id,
+                                title = movie.title,
+                                posterUrl = movie.poster_path
+                            )
+                        }
+                    ) {
+                        Text("Add to Favorites")
+                    }
                 }
             }
         }

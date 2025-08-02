@@ -3,6 +3,7 @@ package com.minyu.moviesapp.details.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.minyu.moviesapp.movieList.domain.repository.FavoriteMovieRepository
 import com.minyu.moviesapp.movieList.domain.repository.MovieListRepository
 import com.minyu.moviesapp.movieList.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DetailsViewModel @Inject constructor(
     private val movieListRepository: MovieListRepository,
+    private val favoriteMovieRepository: FavoriteMovieRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -37,40 +39,44 @@ class DetailsViewModel @Inject constructor(
     // Function to fetch movie details
     private fun getMovie(id: Int) {
         viewModelScope.launch {
-            // Update state to indicate that data is being loaded
             _detailsState.update {
                 it.copy(isLoading = true)
             }
 
-            // Fetch movie details from the repository using a flow
             movieListRepository.getMovie(id).collectLatest { result ->
                 when (result) {
-                    // Handle error case
                     is Resource.Error -> {
                         _detailsState.update {
-                            // Update state to indicate that loading has stopped
                             it.copy(isLoading = false)
                         }
                     }
 
-                    // Handle loading state
                     is Resource.Loading -> {
                         _detailsState.update {
                             it.copy(isLoading = result.isLoading)
                         }
                     }
 
-                    // Handle successful data retrieval
                     is Resource.Success -> {
                         result.data?.let { movie ->
                             _detailsState.update {
-                                // Update state with the fetched movie details
                                 it.copy(movie = movie, isLoading = false)
                             }
                         }
                     }
                 }
             }
+        }
+    }
+
+    fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String) {
+        viewModelScope.launch {
+            // Assuming you have a FavoriteMovieRepository injected
+            favoriteMovieRepository.addFavorite(
+                movieId = movieId,
+                title = title,
+                posterUrl = posterUrl
+            )
         }
     }
 }
