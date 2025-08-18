@@ -43,21 +43,20 @@ import com.minyu.moviesapp.movieList.util.Screen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavHostController) {
-    // Obtain ViewModel for movie list
+    // Get the ViewModel for the movie list and favorites using Hilt
     val movieListViewModel = hiltViewModel<MovieListViewModel>()
-
     val favoriteMoviesViewModel = hiltViewModel<FavoriteMoviesViewModel>()
 
-    // Collect the current state of the movie list
+    // Observe the current state of the movie list
     val movieListState = movieListViewModel.movieListState.collectAsState().value
 
-    // Create a NavController for the bottom navigation
+    // Create a NavController for the bottom navigation bar
     val bottomNavController = rememberNavController()
 
-    // Build the UI using Scaffold
+    // Scaffold provides the basic layout structure with top and bottom bars
     Scaffold(
         bottomBar = {
-            // Display the custom BottomNavigationBar
+            // Custom bottom navigation bar for switching between screens
             BottomNavigationBar(
 
                 bottomNavController = bottomNavController,
@@ -65,7 +64,7 @@ fun HomeScreen(navController: NavHostController) {
             )
         },
         topBar = {
-            // Display the TopAppBar with the title based on the current state
+            // Top app bar with dynamic title based on the current screen
             TopAppBar(
                 title = {
                     Text(
@@ -77,19 +76,19 @@ fun HomeScreen(navController: NavHostController) {
                     )
                 },
                 modifier = Modifier.shadow(2.dp),
-                colors = TopAppBarDefaults.smallTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     MaterialTheme.colorScheme.inverseOnSurface
                 )
             )
         }
     ) {
-        // Main content area within the Box
+        // Main content area
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(it)
         ) {
-            // Navigation host for handling different destinations
+            // Navigation host for switching between popular and upcoming movie screens
             NavHost(
                 navController = bottomNavController,
                 startDestination = Screen.PopularMovieList.rout
@@ -115,12 +114,13 @@ fun HomeScreen(navController: NavHostController) {
     }
 }
 
+// Bottom navigation bar composable for switching between movie lists
 @Composable
 fun BottomNavigationBar(
     bottomNavController: NavHostController,
     onEvent: (MovieListUiEvent) -> Unit
 ) {
-
+    // Define the items for the bottom navigation bar
     val items = listOf(
         BottomItem(
             title = stringResource(R.string.popular),
@@ -132,10 +132,12 @@ fun BottomNavigationBar(
         )
     )
 
+    // Remember the currently selected index
     val selected = rememberSaveable {
         mutableIntStateOf(0)
     }
 
+    // NavigationBar provides the Material3 bottom navigation UI
     NavigationBar {
         Row(
             modifier = Modifier.background(MaterialTheme.colorScheme.inverseOnSurface)
@@ -145,6 +147,7 @@ fun BottomNavigationBar(
                     selected = selected.intValue == index,
                     onClick = {
                         selected.intValue = index
+                        // Handle navigation and event when an item is selected
                         when (selected.intValue) {
                             0 -> {
                                 onEvent(MovieListUiEvent.Navigate)
@@ -179,6 +182,7 @@ fun BottomNavigationBar(
 
 }
 
+// Data class representing a bottom navigation item
 data class BottomItem(
     val title: String,
     val icon: ImageVector

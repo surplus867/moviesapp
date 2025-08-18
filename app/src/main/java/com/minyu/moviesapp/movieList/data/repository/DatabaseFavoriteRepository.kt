@@ -6,9 +6,12 @@ import com.minyu.moviesapp.movieList.domain.model.Movie
 import com.minyu.moviesapp.movieList.domain.repository.FavoriteMovieRepository
 import javax.inject.Inject
 
+// Repository implementation for managing favorite movies in the database
 class DatabaseFavoriteRepository @Inject constructor(
     private val favoriteMovieDao: FavoriteMovieDao
 ) : FavoriteMovieRepository {
+
+    // Adds a movie to favorites, using a default overview if blank
     override suspend fun addFavorite(movieId: Int, title: String, posterUrl: String, overview: String) {
         val safeOverview = overview.ifBlank { "No overview available" }
         favoriteMovieDao.insertFavorite(
@@ -16,12 +19,12 @@ class DatabaseFavoriteRepository @Inject constructor(
         )
     }
 
-
-
+    // Adds a movie to favorites, using a default overview if blank
     override suspend fun isFavorite(movieId: Int): Boolean {
         return favoriteMovieDao.getAllFavorites().any { it.movieId == movieId }
     }
 
+    // Retrieves all favorite movies, mapping database entities to domain model
     override suspend fun getFavoriteMovies(): List<Movie> {
        return favoriteMovieDao.getAllFavorites().map {
            Movie(
@@ -45,6 +48,7 @@ class DatabaseFavoriteRepository @Inject constructor(
        }
     }
 
+    // Removes a movie from favcrites by its ID
     override suspend fun removeFavorite(movieId: Int) {
         favoriteMovieDao.deleteFavoriteById(movieId)
     }

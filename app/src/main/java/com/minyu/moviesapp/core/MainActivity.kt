@@ -29,24 +29,28 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            // Apply the app's theme
             MoviesappTheme {
+                // Set the system bar color
                 SetBarColor(color = MaterialTheme.colorScheme.inverseOnSurface)
-                // A surface container using the 'background' color from the theme
+                // Main surface container with background color
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-
+                    // Create a navigation controller
                     val navController = rememberNavController()
 
+                    // Set up navigation host with routes
                     NavHost(
                         navController = navController,
                         startDestination = Screen.Home.rout
                     ) {
+                        // Home screen route
                         composable(Screen.Home.rout) {
                             HomeScreen(navController)
                         }
-
+                        // Details screen route with movieId argument
                         composable(
                             Screen.Details.rout + "/{movieId}",
                             arguments = listOf(
@@ -55,10 +59,11 @@ class MainActivity : ComponentActivity() {
                         ) {
                             DetailsScreen(navController)
                         }
+                        // Favorite movies screen route
                         composable("favorite_movies") {
-                            // If using Hilt for ViewModel
+                            // Obtain ViewModel using Hilt
                             val viewModel = androidx.hilt.navigation.compose.hiltViewModel<FavoriteMoviesViewModel>()
-                            FavoriteMoviesScreen(viewModel)
+                            FavoriteMoviesScreen(viewModel, navController)
                         }
                     }
                 }
@@ -66,6 +71,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Helper composable to set system bar color
     @Composable
     private fun SetBarColor(color: Color) {
         val systemUiController = rememberSystemUiController()
