@@ -98,21 +98,14 @@ class MovieListRepositoryImpl @Inject constructor(
             val movieEntity = movieDatabase.movieDao().getMovieById(id)
 
             // Check if the movie was found in the local database and emit the result
-            if(movieEntity != null) {
-                emit(
-                    Resource.Success(movieEntity.toMovie(movieEntity.category))
-                )
-
-                // Emit loading state to notify the UI that data fetching is complete
-                emit(Resource.Loading(false))
-                return@flow
-            }
-
-            // Emit an error if the movie was not found
-            emit(Resource.Error("Error no such movie"))
+            emit(
+                Resource.Success(movieEntity.toMovie(movieEntity.category))
+            )
 
             // Emit loading state to notify the UI that data fetching is complete
             emit(Resource.Loading(false))
+            return@flow
+
         }
     }
 
@@ -120,8 +113,9 @@ class MovieListRepositoryImpl @Inject constructor(
       val favoriteMovieEntity = FavoriteMovieEntity(
           movieId = movieId,
           title = title,
+          overview = "",
           posterUrl = posterUrl
       )
-      movieDatabase.favoriteMovieDao().insertFavoriteMovie(favoriteMovieEntity)
+      movieDatabase.favoriteMovieDao().insertFavorite(favoriteMovieEntity)
   }
 }

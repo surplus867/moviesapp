@@ -33,6 +33,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.minyu.moviesapp.R
+import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import com.minyu.moviesapp.movieList.presentation.MovieListUiEvent
 import com.minyu.moviesapp.movieList.presentation.MovieListViewModel
 import com.minyu.moviesapp.movieList.presentation.PopularMoviesScreen
@@ -44,6 +45,8 @@ import com.minyu.moviesapp.movieList.util.Screen
 fun HomeScreen(navController: NavHostController) {
     // Obtain ViewModel for movie list
     val movieListViewModel = hiltViewModel<MovieListViewModel>()
+
+    val favoriteMoviesViewModel = hiltViewModel<FavoriteMoviesViewModel>()
 
     // Collect the current state of the movie list
     val movieListState = movieListViewModel.movieListState.collectAsState().value
@@ -95,14 +98,16 @@ fun HomeScreen(navController: NavHostController) {
                     PopularMoviesScreen(
                         navController = navController,
                         movieListState = movieListState,
-                        onEvent = movieListViewModel::onEvent
+                        onEvent = movieListViewModel::onEvent,
+                        favoriteMoviesViewModel = favoriteMoviesViewModel
                     )
                 }
                 composable(Screen.UpcomingMovieList.rout) {
                     UpcomingMoviesScreen(
                         navController = navController,
                         movieListState = movieListState,
-                        onEvent = movieListViewModel::onEvent
+                        onEvent = movieListViewModel::onEvent,
+                        favoriteMoviesViewModel = favoriteMoviesViewModel
                     )
                 }
             }

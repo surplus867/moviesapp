@@ -9,7 +9,7 @@ class FavoriteMovieRepositoryImpl @Inject constructor() : FavoriteMovieRepositor
 
     private val favoriteMovies = mutableListOf<Movie>()
 
-    override suspend fun addFavorite(movieId: Int, title: String, posterUrl: String) {
+    override suspend fun addFavorite(movieId: Int, title: String, posterUrl: String, overview: String) {
         if (favoriteMovies.none { it.id == movieId }) {
             favoriteMovies.add(
                 Movie(
@@ -39,5 +39,9 @@ class FavoriteMovieRepositoryImpl @Inject constructor() : FavoriteMovieRepositor
 
     override suspend fun getFavoriteMovies(): List<Movie> {
         return favoriteMovies.toList()
+    }
+
+    override suspend fun removeFavorite(movieId: Int) {
+        favoriteMovies.removeAll { it.id == movieId }
     }
 }

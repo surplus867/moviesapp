@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import com.minyu.moviesapp.movieList.presentation.components.MovieItem
 import com.minyu.moviesapp.movieList.util.Category
 
@@ -21,7 +22,8 @@ import com.minyu.moviesapp.movieList.util.Category
 fun UpcomingMoviesScreen(
     movieListState: MovieListState, // Represents the state of the upcoming movie list and its loading state
     navController: NavHostController, // Responsible for navigation between screens
-    onEvent:(MovieListUiEvent) -> Unit // Callback to handle UI events triggered in this composable
+    onEvent:(MovieListUiEvent) -> Unit, // Callback to handle UI events triggered in this composable
+    favoriteMoviesViewModel: FavoriteMoviesViewModel
 ) {
     // Check if the upcoming movie list is empty
     if (movieListState.upcomingMovieList.isEmpty()) {
@@ -44,7 +46,8 @@ fun UpcomingMoviesScreen(
                 // Display a MovieItem for each movie in the list
                 MovieItem(
                     movie = movieListState.upcomingMovieList[index] ,
-                    navHostController = navController
+                    navHostController = navController,
+                    favoriteMoviesViewModel = favoriteMoviesViewModel
                 )
                 // Add vertical spacing between MovieItems
                 Spacer(modifier = Modifier.height(16.dp))

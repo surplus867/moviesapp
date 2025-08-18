@@ -27,4 +27,23 @@ class FavoriteMoviesViewModel @Inject constructor(
             _favoriteMovies.value = favoriteMovieRepository.getFavoriteMovies()
         }
     }
-}
+
+    fun addFavorite(movie: Movie) {
+        viewModelScope.launch {
+            favoriteMovieRepository.addFavorite(
+                movie.id,
+                movie.title,
+                movie.poster_path,
+                movie.overview
+            )
+            loadFavoriteMovies()
+        }
+    }
+
+        fun removeFavorite(movieId: Int) {
+            viewModelScope.launch {
+                favoriteMovieRepository.removeFavorite(movieId)
+                loadFavoriteMovies()
+            }
+        }
+    }

@@ -71,11 +71,12 @@ class DetailsViewModel @Inject constructor(
 
     fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String) {
         viewModelScope.launch {
-            // Assuming you have a FavoriteMovieRepository injected
+            val overview = detailsState.value.movie?.overview ?: ""
             favoriteMovieRepository.addFavorite(
                 movieId = movieId,
                 title = title,
-                posterUrl = posterUrl
+                posterUrl = posterUrl,
+                overview = overview
             )
         }
     }

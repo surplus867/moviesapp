@@ -40,6 +40,7 @@ import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.size.Size
+import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
 import com.minyu.moviesapp.movieList.domain.model.Movie
 import com.minyu.moviesapp.movieList.util.RatingBar
@@ -49,7 +50,8 @@ import com.minyu.moviesapp.movieList.util.getAverageColor
 @Composable
 fun MovieItem(
     movie: Movie, // Movie data to display
-    navHostController: NavHostController // Navigation controller for navigating to other screens
+    navHostController: NavHostController, // Navigation controller for navigating to other screens
+    favoriteMoviesViewModel: FavoriteMoviesViewModel
 ) {
     // Use Coil's rememberAsyncImagePainter to asynchronously load and display the movie backdrop image
     val imageState = rememberAsyncImagePainter(

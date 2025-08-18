@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey
 data class FavoriteMovieEntity(
     @PrimaryKey val movieId: Int,
     val title: String,
+    val overview: String = "No overview available",
     val posterUrl: String
 )
