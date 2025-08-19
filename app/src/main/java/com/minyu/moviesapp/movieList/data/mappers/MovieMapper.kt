@@ -4,7 +4,7 @@ import com.minyu.moviesapp.movieList.data.local.movie.MovieEntity
 import com.minyu.moviesapp.movieList.data.remote.respond.MovieDto
 import com.minyu.moviesapp.movieList.domain.model.Movie
 
-
+// Maps MovieDto (from API) to MovieEntity (for local database)
 fun MovieDto.toMovieEntity(
     category: String
 ): MovieEntity {
@@ -25,14 +25,18 @@ fun MovieDto.toMovieEntity(
 
         category = category,
 
+        // Convert genre_ids list to comma-separated string, fallback on error
         genre_ids = try {
             genre_ids.joinToString(",")
         } catch (e: Exception) {
             "-1,-2"
-        }
+        },
+        // Store current time as dateAdded
+        dateAdded = System.currentTimeMillis()
     )
 }
 
+// Maps MovieEntity (from local database) to Movie (domain model)
 fun MovieEntity.toMovie(
     category: String
 ): Movie {
@@ -53,10 +57,13 @@ fun MovieEntity.toMovie(
 
         category = category,
 
+        // Convert genre_ids string back to list of Ints, fallback on error
         genre_ids = try {
             genre_ids.split(",").map { it.toInt() }
         } catch (e: Exception) {
             listOf(-1, -2)
-        }
+        },
+        // Pass through dateAdded
+        dateAdded = dateAdded
     )
 }

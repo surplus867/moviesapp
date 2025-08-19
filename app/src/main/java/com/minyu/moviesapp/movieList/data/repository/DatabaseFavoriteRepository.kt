@@ -43,7 +43,8 @@ class DatabaseFavoriteRepository @Inject constructor(
                category = "",
                genre_ids = emptyList(),
                adult = false,
-               backdrop_path = ""
+               backdrop_path = "",
+               dateAdded = System.currentTimeMillis()
            )
        }
     }
