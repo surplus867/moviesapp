@@ -1,5 +1,7 @@
 package com.minyu.moviesapp.movieList.domain.model
 
+import com.minyu.moviesapp.movieList.data.remote.respond.TrailerDto
+
 data class Movie(
     val adult: Boolean,
     val backdrop_path: String,
@@ -16,5 +18,6 @@ data class Movie(
     val vote_average: Double,
     val vote_count: Int,
     val id: Int,
-    val category: String
+    val category: String,
+    val trailers: List<TrailerDto> = emptyList()
 )

@@ -1,5 +1,6 @@
 package com.minyu.moviesapp.details.presentation
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -39,36 +40,47 @@ class DetailsViewModel @Inject constructor(
     // Function to fetch movie details
     private fun getMovie(id: Int) {
         viewModelScope.launch {
-            _detailsState.update {
-                it.copy(isLoading = true)
-            }
+            // Set loading state
+            _detailsState.update { it.copy(isLoading = true) }
 
-            movieListRepository.getMovie(id).collectLatest { result ->
+            // Collect movie data from repository
+            movieListRepository.getMovie(id).collect { result ->
                 when (result) {
                     is Resource.Error -> {
+                        // On error, stop loading
                         _detailsState.update {
                             it.copy(isLoading = false)
                         }
                     }
-
                     is Resource.Loading -> {
+                        // Update loading state
                         _detailsState.update {
                             it.copy(isLoading = result.isLoading)
                         }
                     }
-
                     is Resource.Success -> {
                         result.data?.let { movie ->
-                            _detailsState.update {
-                                it.copy(movie = movie, isLoading = false)
-                            }
+                            // Try to fetch the offical trailer
+                            val trailers = try {
+                                movieListRepository.getMovieTrailers(id)
+                                    .firstOrNull { it.official == true && it.type == "Trailer" }
+                                    ?.let { listOf(it) } ?: emptyList()
+                        } catch (e: Exception) {
+                            emptyList()
                         }
+                            // Update state with movie and trailers
+                            val movieWithTrailers = movie.copy(trailers = trailers)
+                            _detailsState.update {
+                                it.copy(movie = movieWithTrailers, isLoading = false)
+                            }
+                        } ?: _detailsState.update { it.copy(isLoading = false) }
                     }
                 }
             }
         }
     }
 
+    // Add the current movie to favorites
     fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String) {
         viewModelScope.launch {
             val overview = detailsState.value.movie?.overview ?: ""

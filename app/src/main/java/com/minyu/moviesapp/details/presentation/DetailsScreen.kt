@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -38,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImagePainter
@@ -47,17 +49,36 @@ import coil.size.Size
 import com.minyu.moviesapp.R
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
 import com.minyu.moviesapp.movieList.util.RatingBar
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 
+// Composable to display a Youtube trailer using the YouTubePlayerView
+@Composable
+fun YouTubeTrailerPlayer(trailerKey: String, modifier: Modifier = Modifier) {
+    AndroidView(factory = { context ->
+        YouTubePlayerView(context).apply {
+            addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
+                override fun onReady(youTubePlayer: com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer) {
+                    youTubePlayer.loadVideo(trailerKey, 0f)
+                }
+            })
+        }
+    },
+        modifier = modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .clip(RoundedCornerShape(12.dp))
+    )
+}
+
+// Main details screen composable
 @Composable
 fun DetailsScreen(navController: NavController) {
-
-    // Obtain the DetailsViewModel using Hilt dependency injection
+    // Get ViewModel and state
     val detailsViewModel = hiltViewModel<DetailsViewModel>()
-
-    // Collect the current state of the DetailsViewModel
     val detailsState = detailsViewModel.detailsState.collectAsState().value
 
-    // Fetch the backdrop image using Coil and remember its state
+    // Load images using Coil
     val backDropImageState = rememberAsyncImagePainter(
         model = ImageRequest.Builder(LocalContext.current)
             .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.backdrop_path)
@@ -71,15 +92,15 @@ fun DetailsScreen(navController: NavController) {
             .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.poster_path)
             .size(Size.ORIGINAL)
             .build()
-
     ).state
 
-    // Column that represents the entire details screen
+    // Main vertical layout with scrroll
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
+        // Top bar with back button and title
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -87,7 +108,7 @@ fun DetailsScreen(navController: NavController) {
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { navController.popBackStack()} ) {
+            IconButton(onClick = { navController.popBackStack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
             Text(
@@ -97,7 +118,7 @@ fun DetailsScreen(navController: NavController) {
             )
         }
 
-        // Display a placeholder or error message if backdrop image loading fails
+        // Backdrop image or placeholder
         if (backDropImageState is AsyncImagePainter.State.Error) {
             Box(
                 modifier = Modifier
@@ -135,7 +156,7 @@ fun DetailsScreen(navController: NavController) {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Box for displaying poster image or error message
+            // Poster image or placeholder
             Box(
                 modifier = Modifier
                     .width(160.dp)
@@ -170,7 +191,7 @@ fun DetailsScreen(navController: NavController) {
                 }
             }
 
-            // Display movie details in a column
+            // Movie details
             detailsState.movie?.let { movie ->
                 Column(
                     modifier = Modifier.fillMaxWidth()
@@ -275,7 +296,26 @@ fun DetailsScreen(navController: NavController) {
             )
         }
 
-        // Spacer for visual separation
         Spacer(modifier = Modifier.height(32.dp))
+
+        // Trailers section
+        detailsState.movie?.trailers?.firstOrNull()?.let { trailer ->
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                text = "Trailer",
+                fontSize = 19.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            YouTubeTrailerPlayer(
+                trailerKey = trailer.key ?: "",
+                modifier = Modifier
+                    .padding(horizontal = 16.dp) // Add side padding
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Add extra space at the bottom to avoid collision with the navigation bar
+        Spacer(modifier = Modifier.padding(WindowInsets.navigationBars.asPaddingValues()))
     }
 }

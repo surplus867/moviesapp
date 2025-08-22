@@ -1,6 +1,7 @@
 package com.minyu.moviesapp.movieList.data.remote
 
 import com.minyu.moviesapp.movieList.data.remote.respond.MovieListDto
+import com.minyu.moviesapp.movieList.data.remote.respond.TrailerListDto
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -13,6 +14,12 @@ interface MovieApi {
         @Query("page") page: Int,
         @Query("api_key") apikey: String = API_KEY
     ): MovieListDto
+
+    @GET("movie/{movie_id}/videos")
+    suspend fun getMovieTrailers(
+        @Path("movie_id") movieId: Int,
+        @Query("api_key") apikey: String = API_KEY
+    ): TrailerListDto
 
 
     companion object {

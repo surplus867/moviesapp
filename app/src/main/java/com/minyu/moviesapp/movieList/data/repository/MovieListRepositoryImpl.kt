@@ -7,11 +7,13 @@ import com.minyu.moviesapp.movieList.data.local.movie.MovieDatabase
 import com.minyu.moviesapp.movieList.data.mappers.toMovie
 import com.minyu.moviesapp.movieList.data.mappers.toMovieEntity
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
+import com.minyu.moviesapp.movieList.data.remote.respond.TrailerDto
 import com.minyu.moviesapp.movieList.domain.model.Movie
 import com.minyu.moviesapp.movieList.domain.repository.MovieListRepository
 import com.minyu.moviesapp.movieList.util.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import android.util.Log
 import okio.IOException
 import retrofit2.HttpException
 import javax.inject.Inject
@@ -40,11 +42,12 @@ class MovieListRepositoryImpl @Inject constructor(
             // Check if local data should be used and emit the result
             val shouldLoadLocalMovie = localMovieList.isNotEmpty() && !forceFetchFromRemote
             if (shouldLoadLocalMovie) {
-                emit(Resource.Success(
-                    data = localMovieList.map { movieEntity ->
-                        movieEntity.toMovie(category)
-                    }
-                ))
+                emit(
+                    Resource.Success(
+                        data = localMovieList.map { movieEntity ->
+                            movieEntity.toMovie(category)
+                        }
+                    ))
 
                 // Emit loading state to notify the UI that data fetching is complete
                 emit(Resource.Loading(false))
@@ -81,9 +84,10 @@ class MovieListRepositoryImpl @Inject constructor(
             movieDatabase.movieDao().upsertMovieList(movieEntities)
 
             // Emit the transformed data to the UI
-            emit(Resource.Success(
-                movieEntities.map { it.toMovie(category) }
-            ))
+            emit(
+                Resource.Success(
+                    movieEntities.map { it.toMovie(category) }
+                ))
             emit(Resource.Loading(false))
         }
     }
@@ -109,13 +113,19 @@ class MovieListRepositoryImpl @Inject constructor(
         }
     }
 
-  override suspend fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String) {
-      val favoriteMovieEntity = FavoriteMovieEntity(
-          movieId = movieId,
-          title = title,
-          overview = "",
-          posterUrl = posterUrl
-      )
-      movieDatabase.favoriteMovieDao().insertFavorite(favoriteMovieEntity)
-  }
+    override suspend fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String) {
+        val favoriteMovieEntity = FavoriteMovieEntity(
+            movieId = movieId,
+            title = title,
+            overview = "",
+            posterUrl = posterUrl
+        )
+        movieDatabase.favoriteMovieDao().insertFavorite(favoriteMovieEntity)
+    }
+
+    override suspend fun getMovieTrailers(movieId: Int): List<TrailerDto> {
+        val trailers = movieApi.getMovieTrailers(movieId).results
+        Log.d("Test", "Fetched trailers: ${trailers.size}")
+        return trailers
+    }
 }
