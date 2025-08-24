@@ -26,17 +26,24 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.isDebugInspectorInfoEnabled
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -47,6 +54,8 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.size.Size
 import com.minyu.moviesapp.R
+import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
+import com.minyu.moviesapp.movieList.data.local.movie.MovieEntity
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
 import com.minyu.moviesapp.movieList.util.RatingBar
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
@@ -77,6 +86,7 @@ fun DetailsScreen(navController: NavController) {
     // Get ViewModel and state
     val detailsViewModel = hiltViewModel<DetailsViewModel>()
     val detailsState = detailsViewModel.detailsState.collectAsState().value
+    val reviews by detailsViewModel.reviews.collectAsState(emptyList<MovieReviewEntity>())
 
     // Load images using Coil
     val backDropImageState = rememberAsyncImagePainter(
@@ -94,7 +104,9 @@ fun DetailsScreen(navController: NavController) {
             .build()
     ).state
 
-    // Main vertical layout with scrroll
+    var reviewText by remember { mutableStateOf("") }
+
+    // Main vertical layout with scroll
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -314,6 +326,77 @@ fun DetailsScreen(navController: NavController) {
             )
             Spacer(modifier = Modifier.height(24.dp))
         }
+
+        // Add Review Section
+        Text(
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp),
+            text = "Add a Review",
+            fontSize = 19.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        OutlinedTextField(
+            value = reviewText,
+            onValueChange = { reviewText = it },
+            label = { Text("Your review") },
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth()
+        )
+
+        Button(
+            onClick = {
+                detailsState.movie?.let { movie ->
+                    detailsViewModel.insertReview(
+                        MovieReviewEntity(
+                           movieId = movie.id,
+                            userName = "YourUserName",
+                            rating = 4.5f,
+                            comment = reviewText,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                    reviewText = ""
+                }
+            },
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth(),
+            enabled = reviewText.isNotBlank()
+        ) {
+            Text("Submit Review")
+        }
+
+        // Display submitted reviews
+        Text(
+            modifier = Modifier.padding(start = 16.dp, top = 24.dp),
+            text = "Reviews",
+            fontSize = 19.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        reviews.forEach { review ->
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Text(text = review.userName, fontWeight = FontWeight.Bold)
+                Text(text = "Rating: ${review.rating}")
+                Text(text = review.comment)
+                Text(
+                    text = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+                        .format(java.util.Date(review.timestamp)),
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+                // Add Delete button
+                Button(
+                    onClick = { detailsViewModel.deleteReview(review.id)},
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text("Delete")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+
 
         // Add extra space at the bottom to avoid collision with the navigation bar
         Spacer(modifier = Modifier.padding(WindowInsets.navigationBars.asPaddingValues()))

@@ -14,6 +14,7 @@ import com.minyu.moviesapp.movieList.util.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import android.util.Log
+import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
 import okio.IOException
 import retrofit2.HttpException
 import javax.inject.Inject
@@ -127,5 +128,18 @@ class MovieListRepositoryImpl @Inject constructor(
         val trailers = movieApi.getMovieTrailers(movieId).results
         Log.d("Test", "Fetched trailers: ${trailers.size}")
         return trailers
+    }
+
+    override suspend fun insertReview(review: MovieReviewEntity) {
+        movieDatabase.movieReviewDao().insertReview(review)
+    }
+
+    override fun getReviewsForMovie(movieId: Int): Flow<List<MovieReviewEntity>> {
+        return movieDatabase.movieReviewDao().getReviewsForMovie(movieId)
+    }
+
+    override suspend fun deleteReview(reviewId: Int) {
+        movieDatabase.movieReviewDao().deleteReviewById(reviewId)
+
     }
 }

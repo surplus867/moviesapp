@@ -1,9 +1,9 @@
 package com.minyu.moviesapp.details.presentation
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
 import com.minyu.moviesapp.movieList.domain.repository.FavoriteMovieRepository
 import com.minyu.moviesapp.movieList.domain.repository.MovieListRepository
 import com.minyu.moviesapp.movieList.util.Resource
@@ -31,11 +31,21 @@ class DetailsViewModel @Inject constructor(
     // Public read-only state flow to expose details screen state
     val detailsState = _detailsState.asStateFlow()
 
+    private val _reviews = MutableStateFlow<List<MovieReviewEntity>>(emptyList())
+    val reviews = _reviews.asStateFlow()
+
     // Initialization block, called when the viewModel is created
     init {
         // Start fetching movie details upon ViewModel creation
         getMovie(movieId ?: -1)
+        movieId?.let { id ->
+            viewModelScope.launch {
+                movieListRepository.getReviewsForMovie(id).collectLatest { reviewsList ->
+                    _reviews.value = reviewsList
+                }
+            }
     }
+}
 
     // Function to fetch movie details
     private fun getMovie(id: Int) {
@@ -90,6 +100,18 @@ class DetailsViewModel @Inject constructor(
                 posterUrl = posterUrl,
                 overview = overview
             )
+        }
+    }
+
+    fun insertReview(review: MovieReviewEntity) {
+        viewModelScope.launch {
+            movieListRepository.insertReview(review)
+        }
+    }
+
+    fun deleteReview(reviewId: Int) {
+        viewModelScope.launch {
+            movieListRepository.deleteReview(reviewId)
         }
     }
 }
