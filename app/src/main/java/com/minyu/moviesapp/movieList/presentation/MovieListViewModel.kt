@@ -2,6 +2,7 @@ package com.minyu.moviesapp.movieList.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.minyu.moviesapp.movieList.domain.model.Movie
 import com.minyu.moviesapp.movieList.domain.repository.MovieListRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -128,5 +129,10 @@ class MovieListViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun getAsianMovies(): List<Movie> {
+        return (movieListState.value.popularMovieList + movieListState.value.upcomingMovieList)
+            .filter { it.region == "Asia" }
     }
 }

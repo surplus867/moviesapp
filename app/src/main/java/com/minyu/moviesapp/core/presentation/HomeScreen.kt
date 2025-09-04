@@ -34,6 +34,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.minyu.moviesapp.R
 import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
+import com.minyu.moviesapp.details.presentation.AsianMovieScreen
 import com.minyu.moviesapp.movieList.presentation.MovieListUiEvent
 import com.minyu.moviesapp.movieList.presentation.MovieListViewModel
 import com.minyu.moviesapp.movieList.presentation.PopularMoviesScreen
@@ -91,9 +92,9 @@ fun HomeScreen(navController: NavHostController) {
             // Navigation host for switching between popular and upcoming movie screens
             NavHost(
                 navController = bottomNavController,
-                startDestination = Screen.PopularMovieList.rout
+                startDestination = Screen.PopularMovieList.route
             ) {
-                composable(Screen.PopularMovieList.rout) {
+                composable(Screen.PopularMovieList.route) {
                     PopularMoviesScreen(
                         navController = navController,
                         movieListState = movieListState,
@@ -101,11 +102,19 @@ fun HomeScreen(navController: NavHostController) {
                         favoriteMoviesViewModel = favoriteMoviesViewModel
                     )
                 }
-                composable(Screen.UpcomingMovieList.rout) {
+                composable(Screen.UpcomingMovieList.route) {
                     UpcomingMoviesScreen(
                         navController = navController,
                         movieListState = movieListState,
                         onEvent = movieListViewModel::onEvent,
+                        favoriteMoviesViewModel = favoriteMoviesViewModel
+                    )
+                }
+                composable(Screen.AsianMovieList.route) {
+                    // Call your Korean Screen/route here
+                    // If you already have a VM + Screen, use that:
+                    AsianMovieScreen(
+                        navHostController = navController,
                         favoriteMoviesViewModel = favoriteMoviesViewModel
                     )
                 }
@@ -122,20 +131,13 @@ fun BottomNavigationBar(
 ) {
     // Define the items for the bottom navigation bar
     val items = listOf(
-        BottomItem(
-            title = stringResource(R.string.popular),
-            icon = Icons.Rounded.Movie
-        ),
-        BottomItem(
-            title = stringResource(R.string.upcoming),
-            icon = Icons.Rounded.Upcoming
-        )
+        BottomItem(title = stringResource(R.string.popular), icon = Icons.Rounded.Movie),
+        BottomItem(title = stringResource(R.string.upcoming), icon = Icons.Rounded.Upcoming),
+        BottomItem(title = stringResource(R.string.asian), icon = Icons.Rounded.Upcoming)
     )
 
     // Remember the currently selected index
-    val selected = rememberSaveable {
-        mutableIntStateOf(0)
-    }
+    val selected = rememberSaveable { mutableIntStateOf(0) }
 
     // NavigationBar provides the Material3 bottom navigation UI
     NavigationBar {
@@ -147,18 +149,19 @@ fun BottomNavigationBar(
                     selected = selected.intValue == index,
                     onClick = {
                         selected.intValue = index
+                        onEvent(MovieListUiEvent.Navigate)
                         // Handle navigation and event when an item is selected
-                        when (selected.intValue) {
-                            0 -> {
-                                onEvent(MovieListUiEvent.Navigate)
-                                bottomNavController.popBackStack()
-                                bottomNavController.navigate(Screen.PopularMovieList.rout)
-                            }
 
-                            1 -> {
-                                onEvent(MovieListUiEvent.Navigate)
-                                bottomNavController.popBackStack()
-                                bottomNavController.navigate(Screen.UpcomingMovieList.rout)
+                        val route = when (index) {
+                            0 -> Screen.PopularMovieList.route
+                            1 -> Screen.UpcomingMovieList.route
+                            else -> Screen.AsianMovieList.route
+                        }
+                        bottomNavController.navigate(route) {
+                            launchSingleTop = true
+                            restoreState = true
+                            popUpTo(bottomNavController.graph.startDestinationId) {
+                                saveState = true
                             }
                         }
                     },
@@ -179,10 +182,8 @@ fun BottomNavigationBar(
             }
         }
     }
-
 }
 
-// Data class representing a bottom navigation item
 data class BottomItem(
     val title: String,
     val icon: ImageVector

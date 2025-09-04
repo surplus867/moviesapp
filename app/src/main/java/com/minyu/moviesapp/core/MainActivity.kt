@@ -15,13 +15,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.minyu.moviesapp.core.presentation.HomeScreen
-import com.minyu.moviesapp.details.presentation.DetailsScreen
-import com.minyu.moviesapp.movieList.util.Screen
-import com.minyu.moviesapp.ui.theme.MoviesappTheme
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.minyu.moviesapp.core.presentation.HomeScreen
+import com.minyu.moviesapp.details.presentation.AsianMovieViewModel
+import com.minyu.moviesapp.details.presentation.DetailsScreen
 import com.minyu.moviesapp.details.presentation.FavoriteMoviesScreen
 import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
+import com.minyu.moviesapp.details.presentation.AsianMovieScreen
+import com.minyu.moviesapp.movieList.util.Screen
+import com.minyu.moviesapp.ui.theme.MoviesappTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -44,15 +46,15 @@ class MainActivity : ComponentActivity() {
                     // Set up navigation host with routes
                     NavHost(
                         navController = navController,
-                        startDestination = Screen.Home.rout
+                        startDestination = Screen.Home.route
                     ) {
                         // Home screen route
-                        composable(Screen.Home.rout) {
+                        composable(Screen.Home.route) {
                             HomeScreen(navController)
                         }
                         // Details screen route with movieId argument
                         composable(
-                            Screen.Details.rout + "/{movieId}",
+                            Screen.Details.route + "/{movieId}",
                             arguments = listOf(
                                 navArgument("movieId") { type = NavType.IntType }
                             )
@@ -64,6 +66,17 @@ class MainActivity : ComponentActivity() {
                             // Obtain ViewModel using Hilt
                             val viewModel = androidx.hilt.navigation.compose.hiltViewModel<FavoriteMoviesViewModel>()
                             FavoriteMoviesScreen(viewModel, navController)
+                        }
+
+                        // Asian movies screen route
+                        composable("asian_movies") {
+                            val favoriteMoviesViewModel = androidx.hilt.navigation.compose.hiltViewModel<FavoriteMoviesViewModel>()
+                            val asianMovieViewModel = androidx.hilt.navigation.compose.hiltViewModel<AsianMovieViewModel>()
+                            AsianMovieScreen(
+                                navHostController = navController,
+                                favoriteMoviesViewModel = favoriteMoviesViewModel,
+                                viewModel = asianMovieViewModel
+                            )
                         }
                     }
                 }

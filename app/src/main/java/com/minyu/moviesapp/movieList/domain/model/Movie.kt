@@ -8,6 +8,7 @@ data class Movie(
     val genre_ids: List<Int>,
     val original_language: String,
     val original_title: String,
+    val country: String,
     val overview: String,
     val popularity: Double,
     val dateAdded: Long,
@@ -19,5 +20,6 @@ data class Movie(
     val vote_count: Int,
     val id: Int,
     val category: String,
+    val region: String,
     val trailers: List<TrailerDto> = emptyList()
 )

@@ -6,7 +6,8 @@ import com.minyu.moviesapp.movieList.domain.model.Movie
 
 // Maps MovieDto (from API) to MovieEntity (for local database)
 fun MovieDto.toMovieEntity(
-    category: String
+    category: String,
+    country: String
 ): MovieEntity {
     return MovieEntity(
         adult = adult ?: false,
@@ -19,11 +20,12 @@ fun MovieDto.toMovieEntity(
         vote_average = vote_average ?: 0.0,
         popularity = popularity ?: 0.0,
         vote_count = vote_count ?: 0,
-        id = id ?: -1,
+        id = id,
         original_title = original_title ?: "",
         video = video ?: false,
 
         category = category,
+        country = country,
 
         // Convert genre_ids list to comma-separated string, fallback on error
         genre_ids = try {
@@ -38,9 +40,11 @@ fun MovieDto.toMovieEntity(
 
 // Maps MovieEntity (from local database) to Movie (domain model)
 fun MovieEntity.toMovie(
-    category: String
-): Movie {
+    category: String,
+    country: String
+): Movie{
     return Movie(
+        adult = adult,
         backdrop_path = backdrop_path,
         original_language = original_language,
         overview = overview,
@@ -50,12 +54,12 @@ fun MovieEntity.toMovie(
         vote_average = vote_average,
         popularity = popularity,
         vote_count = vote_count,
-        video = video,
         id = id,
-        adult = adult,
         original_title = original_title,
-
+        video = video,
         category = category,
+        country = country,
+        region = country,
 
         // Convert genre_ids string back to list of Ints, fallback on error
         genre_ids = try {

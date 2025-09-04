@@ -3,8 +3,14 @@ package com.minyu.moviesapp.movieList.data.local.movie
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity
+@Entity(
+    tableName = "movies",
+    primaryKeys = ["id", "category", "country"]
+    )
 data class MovieEntity(
+    val id: Int,
+    val category: String,
+    val country: String,
     val adult: Boolean,
     val backdrop_path: String,
     val genre_ids: String,
@@ -19,8 +25,4 @@ data class MovieEntity(
     val video: Boolean,
     val vote_average: Double,
     val vote_count: Int,
-
-    @PrimaryKey
-    val id: Int,
-    val category: String,
 )

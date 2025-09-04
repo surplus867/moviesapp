@@ -28,7 +28,9 @@ class FavoriteMovieRepositoryImpl @Inject constructor() : FavoriteMovieRepositor
                     video = false,
                     vote_count = 0,
                     category = "",
-                    dateAdded = System.currentTimeMillis()
+                    dateAdded = System.currentTimeMillis(),
+                    country = "",
+                    region = ""
                 )
             )
         }

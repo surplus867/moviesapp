@@ -22,6 +22,16 @@ interface MovieApi {
     ): TrailerListDto
 
 
+    // Add this function to fetch Korean movies
+    @GET("discover/movie")
+    suspend fun getMoviesByLanguage(
+        @Query("with_original_language") language: String = "ko",
+        @Query("sort_by") sortBy: String = "popularity.desc",
+        @Query("page") page: Int,
+        @Query("api_key") apikey: String = API_KEY
+    ): MovieListDto
+
+
     companion object {
         const val BASE_URL = "https://api.themoviedb.org/3/"
         const val IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"

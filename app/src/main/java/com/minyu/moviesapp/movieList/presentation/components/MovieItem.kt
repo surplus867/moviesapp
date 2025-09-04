@@ -86,7 +86,7 @@ fun MovieItem(
             )
             .clickable {
                 // Navigate to the movie details screen when clicked
-                navHostController.navigate(Screen.Details.rout + "/${movie.id}")
+                navHostController.navigate(Screen.Details.route + "/${movie.id}")
             }
     ) {
         // Display a placeholder if there is an error loading the image

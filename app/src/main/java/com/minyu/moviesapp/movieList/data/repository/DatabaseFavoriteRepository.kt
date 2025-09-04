@@ -44,7 +44,9 @@ class DatabaseFavoriteRepository @Inject constructor(
                genre_ids = emptyList(),
                adult = false,
                backdrop_path = "",
-               dateAdded = System.currentTimeMillis()
+               dateAdded = System.currentTimeMillis(),
+               country = "",
+               region = ""
            )
        }
     }
