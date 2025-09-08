@@ -64,7 +64,7 @@ fun MovieItem(
     // Default color for the background gradient
     val defaultColor = MaterialTheme.colorScheme.secondaryContainer
 
-    // Mutable state to store the dominant coor of the movie image
+    // Mutable state to store the dominant color of the movie image
     var dominantColor by remember {
         mutableStateOf(defaultColor)
     }

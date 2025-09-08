@@ -1,8 +1,10 @@
 package com.minyu.moviesapp.core
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -10,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.core.os.LocaleListCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,65 +20,73 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.minyu.moviesapp.core.presentation.HomeScreen
+import com.minyu.moviesapp.core.presentation.LanguageSelectionScreen
+import com.minyu.moviesapp.details.presentation.AsianMovieScreen
 import com.minyu.moviesapp.details.presentation.AsianMovieViewModel
 import com.minyu.moviesapp.details.presentation.DetailsScreen
 import com.minyu.moviesapp.details.presentation.FavoriteMoviesScreen
 import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
-import com.minyu.moviesapp.details.presentation.AsianMovieScreen
 import com.minyu.moviesapp.movieList.util.Screen
 import com.minyu.moviesapp.ui.theme.MoviesappTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    // Ensure this Activity is born with the saved locale
+    override fun attachBaseContext(newBase: Context) {
+        val saved = LanguagePrefs.get(newBase) // "en", "ko", "ja", "zh-HK"
+        val wrapped = if (saved.isNotBlank()) LocaleHelper.wrapWithLocale(newBase, saved) else newBase
+        super.attachBaseContext(wrapped)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Also apply per-app locales (AppCompat) to persist + help other components
+        val saved = LanguagePrefs.get(this)
+        if (saved.isNotBlank()) {
+            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(saved))
+        }
+
         super.onCreate(savedInstanceState)
         setContent {
-            // Apply the app's theme
             MoviesappTheme {
-                // Set the system bar color
                 SetBarColor(color = MaterialTheme.colorScheme.inverseOnSurface)
-                // Main surface container with background color
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Create a navigation controller
                     val navController = rememberNavController()
-
-                    // Set up navigation host with routes
                     NavHost(
                         navController = navController,
                         startDestination = Screen.Home.route
                     ) {
-                        // Home screen route
                         composable(Screen.Home.route) {
                             HomeScreen(navController)
                         }
-                        // Details screen route with movieId argument
+                        composable("Language_screen_route") {
+                            LanguageSelectionScreen { selectedLanguage ->
+                                LanguagePrefs.set(this@MainActivity, selectedLanguage)
+                                navController.popBackStack()
+                                recreate()
+                            }
+                        }
                         composable(
                             Screen.Details.route + "/{movieId}",
-                            arguments = listOf(
-                                navArgument("movieId") { type = NavType.IntType }
-                            )
+                            arguments = listOf(navArgument("movieId") { type = NavType.IntType })
                         ) {
                             DetailsScreen(navController)
                         }
-                        // Favorite movies screen route
                         composable("favorite_movies") {
-                            // Obtain ViewModel using Hilt
-                            val viewModel = androidx.hilt.navigation.compose.hiltViewModel<FavoriteMoviesViewModel>()
-                            FavoriteMoviesScreen(viewModel, navController)
+                            val vm = androidx.hilt.navigation.compose.hiltViewModel<FavoriteMoviesViewModel>()
+                            FavoriteMoviesScreen(vm, navController)
                         }
-
-                        // Asian movies screen route
                         composable("asian_movies") {
-                            val favoriteMoviesViewModel = androidx.hilt.navigation.compose.hiltViewModel<FavoriteMoviesViewModel>()
-                            val asianMovieViewModel = androidx.hilt.navigation.compose.hiltViewModel<AsianMovieViewModel>()
+                            val favVm = androidx.hilt.navigation.compose.hiltViewModel<FavoriteMoviesViewModel>()
+                            val asianVm = androidx.hilt.navigation.compose.hiltViewModel<AsianMovieViewModel>()
                             AsianMovieScreen(
                                 navHostController = navController,
-                                favoriteMoviesViewModel = favoriteMoviesViewModel,
-                                viewModel = asianMovieViewModel
+                                favoriteMoviesViewModel = favVm,
+                                viewModel = asianVm
                             )
                         }
                     }
@@ -84,12 +95,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Helper composable to set system bar color
     @Composable
     private fun SetBarColor(color: Color) {
         val systemUiController = rememberSystemUiController()
-        LaunchedEffect(key1 = color) {
-            systemUiController.setSystemBarsColor(color)
-        }
+        LaunchedEffect(color) { systemUiController.setSystemBarsColor(color) }
     }
 }

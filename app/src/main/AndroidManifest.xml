@@ -18,6 +18,10 @@
         <activity
             android:name=".core.MainActivity"
             android:exported="true"
+            android:theme="@style/Theme.Moviesapp" />
+        <activity
+            android:name=".core.presentation.LanguageSelectionActivity"
+            android:exported="true"
             android:theme="@style/Theme.Moviesapp">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
