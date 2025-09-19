@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.os.LocaleListCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -21,6 +22,7 @@ import androidx.navigation.navArgument
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.minyu.moviesapp.core.presentation.HomeScreen
 import com.minyu.moviesapp.core.presentation.LanguageSelectionScreen
+import com.minyu.moviesapp.details.presentation.AsianDramaScreen
 import com.minyu.moviesapp.details.presentation.AsianMovieScreen
 import com.minyu.moviesapp.details.presentation.AsianMovieViewModel
 import com.minyu.moviesapp.details.presentation.DetailsScreen
@@ -77,16 +79,23 @@ class MainActivity : ComponentActivity() {
                             DetailsScreen(navController)
                         }
                         composable("favorite_movies") {
-                            val vm = androidx.hilt.navigation.compose.hiltViewModel<FavoriteMoviesViewModel>()
+                            val vm = hiltViewModel<FavoriteMoviesViewModel>()
                             FavoriteMoviesScreen(vm, navController)
                         }
                         composable("asian_movies") {
-                            val favVm = androidx.hilt.navigation.compose.hiltViewModel<FavoriteMoviesViewModel>()
-                            val asianVm = androidx.hilt.navigation.compose.hiltViewModel<AsianMovieViewModel>()
+                            val favVm = hiltViewModel<FavoriteMoviesViewModel>()
+                            val asianVm = hiltViewModel<AsianMovieViewModel>()
                             AsianMovieScreen(
                                 navHostController = navController,
                                 favoriteMoviesViewModel = favVm,
                                 viewModel = asianVm
+                            )
+                        }
+                        composable(Screen.AsianDramaList.route) {
+                            val favVm = hiltViewModel<FavoriteMoviesViewModel>()
+                            AsianDramaScreen(
+                                navHostController = navController,
+                                favoriteMoviesViewModel = favVm
                             )
                         }
                     }

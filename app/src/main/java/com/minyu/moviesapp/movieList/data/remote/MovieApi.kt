@@ -32,6 +32,20 @@ interface MovieApi {
     ): MovieListDto
 
 
+    suspend fun getAsianDramas(
+        language: String,
+        page: Int,
+        apikey: String = API_KEY
+    ): MovieListDto = getMoviesByLanguageAndGenre(language, "18", page, apikey)
+
+    @GET("discover/movie")
+    suspend fun getMoviesByLanguageAndGenre(
+        @Query("with_original_language") language: String,
+        @Query("with_genres") genre: String,
+        @Query("page") page: Int,
+        @Query("api_key") apikey: String = API_KEY
+    ): MovieListDto
+
     companion object {
         const val BASE_URL = "https://api.themoviedb.org/3/"
         const val IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"

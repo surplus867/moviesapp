@@ -19,6 +19,11 @@ interface MovieListRepository {
     ) : Flow<Resource<List<Movie>>>
 
     suspend fun getMovie(id: Int): Flow<Resource<Movie>>
+
+    suspend fun getAsianDramaList(
+        forceFetchFromRemote: Boolean,
+        page: Int
+    ): Flow<Resource<List<Movie>>>
     suspend fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String)
 
     suspend fun getMovieTrailers(movieId: Int): List<TrailerDto>

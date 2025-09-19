@@ -1,7 +1,6 @@
 package com.minyu.moviesapp.movieList.data.repository
 
 
-import android.R.attr.id
 import android.util.Log
 import com.minyu.moviesapp.movieList.data.local.entity.FavoriteMovieEntity
 import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
@@ -184,6 +183,61 @@ class MovieListRepositoryImpl @Inject constructor(
 
         }
     }
+
+     override suspend fun getAsianDramaList(
+        forceFetchFromRemote: Boolean,
+        page: Int
+    ): Flow<Resource<List<Movie>>> = flow {
+        emit(Resource.Loading(true))
+
+        val asianCountries = listOf("Japan", "China", "Korea")
+        val asianCategories = listOf("japanese drama", "chinese drama", "korean drama")
+        val asianLanguageCodes = listOf("ja", "zh", "ko")
+
+        // Try local cache first
+        val localDramaList = asianCountries.zip(asianCountries).flatMap { (category, country) ->
+            movieDatabase.movieDao().getMovieListByCategoryAndCountry(category, country)
+        }
+
+        if (localDramaList.isNotEmpty() && !forceFetchFromRemote) {
+            emit(Resource.Success(localDramaList.map { it.toMovie(it.category, it.country) }))
+            emit(Resource.Loading(false))
+            return@flow
+        }
+
+        val aggregatedEntities = mutableListOf<MovieEntity>()
+
+        for(i in asianCountries.indices) {
+            val category = asianCategories[i]
+            val country = asianCountries[i]
+            val lang = asianLanguageCodes[i]
+
+            try {
+                val response = movieApi.getMoviesByLanguageAndGenre(
+                    language = lang,
+                    genre = "18",
+                    page = page
+                )
+                val entities = response.results.map { dto ->
+                    dto.toMovieEntity(category = category, country = country)
+                }
+                aggregatedEntities.addAll(entities)
+            } catch (e: Exception) {
+                emit(Resource.Error(message = "Error loading $country dramas"))
+                emit(Resource.Loading(false))
+                return@flow
+            }
+        }
+
+        if (aggregatedEntities.isNotEmpty()) {
+            movieDatabase.movieDao().upsertMovieList(aggregatedEntities)
+        }
+
+        emit(Resource.Success(aggregatedEntities.map { it.toMovie(it.category, it.country) }))
+        emit(Resource.Loading(false))
+    }
+
+
 
     override suspend fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String) {
         val favoriteMovieEntity = FavoriteMovieEntity(

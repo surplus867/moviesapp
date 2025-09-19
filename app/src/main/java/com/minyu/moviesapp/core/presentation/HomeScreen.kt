@@ -1,3 +1,7 @@
+// HomeScreen.kt
+// This file contains the main HomeScreen composable and the bottom navigation bar for the movies app.
+// It manages navigation between Popular, Upcoming, Asian Movie, and Asian Drama screens, and handles back navigation logic for each tab.
+
 package com.minyu.moviesapp.core.presentation
 
 import androidx.compose.foundation.background
@@ -9,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.Theaters
 import androidx.compose.material.icons.rounded.Upcoming
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,8 +26,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -36,6 +44,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.minyu.moviesapp.R
+import com.minyu.moviesapp.details.presentation.AsianDramaScreen
 import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import com.minyu.moviesapp.details.presentation.AsianMovieScreen
 import com.minyu.moviesapp.movieList.presentation.MovieListUiEvent
@@ -57,32 +66,111 @@ fun HomeScreen(navController: NavHostController) {
     // Create a NavController for the bottom navigation bar
     val bottomNavController = rememberNavController()
 
+    // Set of tab routes for navigation
+    val tabRoute = remember {
+        setOf(
+            Screen.PopularMovieList.route,
+            Screen.UpcomingMovieList.route,
+            Screen.AsianMovieList.route,
+            Screen.AsianDramaList.route
+        )
+    }
+
+    // Track the current route in the bottom navigation
+    val bottomBackStackEntryState =
+        bottomNavController.currentBackStackEntryFlow.collectAsState(
+            initial = bottomNavController.currentBackStackEntry
+        )
+    val currentBottomRoute = bottomBackStackEntryState.value?.destination?.route
+
+    // Track previous tab for back navigation
+    val previousTabRoute = rememberSaveable { mutableStateOf<String?>(null) }
+    val lastRouteSeen = rememberSaveable { mutableStateOf<String?>(currentBottomRoute) }
+
+    // Update previousTabRoute when the tab changes
+    LaunchedEffect(currentBottomRoute) {
+        val newR = currentBottomRoute
+        val oldR  = lastRouteSeen.value
+        if (newR != null && oldR != null && newR != oldR && newR in tabRoute && oldR in tabRoute) {
+            previousTabRoute.value = oldR
+        }
+        lastRouteSeen.value = newR
+    }
+
     // Scaffold provides the basic layout structure with top and bottom bars
     Scaffold(
         bottomBar = {
             // Custom bottom navigation bar for switching between screens
             BottomNavigationBar(
-
                 bottomNavController = bottomNavController,
                 onEvent = movieListViewModel::onEvent
             )
         },
         topBar = {
-            // Top app bar with dynamic title based on the current screen
+            // Top app bar with dynamic title and back navigation logic
             TopAppBar(
                 title = {
                     Text(
-                        text = if (movieListState.isCurrentPopularScreen)
-                            stringResource(R.string.popular_movies)
-                        else
-                            stringResource(R.string.upcoming_movies),
+                        text = when (currentBottomRoute) {
+                            Screen.PopularMovieList.route -> stringResource(R.string.popular_movies)
+                            Screen.UpcomingMovieList.route -> stringResource(R.string.upcoming_movies)
+                            Screen.AsianMovieList.route -> stringResource(R.string.asian_movie)
+                            Screen.AsianDramaList.route -> stringResource(R.string.asian_drama)
+                            else -> stringResource(R.string.app_name)
+                        },
                         fontSize = 20.sp
                     )
                 },
                 navigationIcon = {
+                    // Back arrow logic for each tab
                     IconButton(onClick = {
-                        navController.navigate("language_screen_route") {
-                            popUpTo("language_screen_route") { inclusive = true }
+                        when (currentBottomRoute) {
+                            Screen.PopularMovieList.route -> {
+                                // Go to language selection screen
+                                navController.navigate("Language_screen_route")
+                            }
+                            Screen.UpcomingMovieList.route -> {
+                                // Go to popular movie screen
+                                bottomNavController.navigate(Screen.PopularMovieList.route) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                    popUpTo(bottomNavController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                }
+                            }
+                            Screen.AsianMovieList.route -> {
+                                // Go to upcoming movie screen
+                                bottomNavController.navigate(Screen.UpcomingMovieList.route) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                    popUpTo(bottomNavController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                }
+                            }
+                            Screen.AsianDramaList.route -> {
+                                // Go to asian movie screen
+                                bottomNavController.navigate(Screen.AsianMovieList.route) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                    popUpTo(bottomNavController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                }
+                            }
+                            else -> {
+                                // Fallback: go to previous tab if available
+                                previousTabRoute.value?.let { target ->
+                                    bottomNavController.navigate(target) {
+                                        launchSingleTop = true
+                                        restoreState = true
+                                        popUpTo(bottomNavController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -95,13 +183,13 @@ fun HomeScreen(navController: NavHostController) {
             )
         }
     ) {
-        // Main content area
+        // Main content area for the selected tab
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(it)
         ) {
-            // Navigation host for switching between popular and upcoming movie screens
+            // Navigation host for switching between popular, upcoming, asian movie, and asian drama screens
             NavHost(
                 navController = bottomNavController,
                 startDestination = Screen.PopularMovieList.route
@@ -123,9 +211,13 @@ fun HomeScreen(navController: NavHostController) {
                     )
                 }
                 composable(Screen.AsianMovieList.route) {
-                    // Call your Korean Screen/route here
-                    // If you already have a VM + Screen, use that:
                     AsianMovieScreen(
+                        navHostController = navController,
+                        favoriteMoviesViewModel = favoriteMoviesViewModel
+                    )
+                }
+                composable(Screen.AsianDramaList.route) {
+                    AsianDramaScreen(
                         navHostController = navController,
                         favoriteMoviesViewModel = favoriteMoviesViewModel
                     )
@@ -145,7 +237,8 @@ fun BottomNavigationBar(
     val items = listOf(
         BottomItem(title = stringResource(R.string.popular), icon = Icons.Rounded.Movie),
         BottomItem(title = stringResource(R.string.upcoming), icon = Icons.Rounded.Upcoming),
-        BottomItem(title = stringResource(R.string.asian), icon = Icons.Rounded.Upcoming)
+        BottomItem(title = stringResource(R.string.asian_movie), icon = Icons.Rounded.Theaters),
+        BottomItem(title = stringResource(R.string.asian_drama), icon = Icons.Rounded.Theaters)
     )
 
     // Remember the currently selected index
@@ -163,11 +256,11 @@ fun BottomNavigationBar(
                         selected.intValue = index
                         onEvent(MovieListUiEvent.Navigate)
                         // Handle navigation and event when an item is selected
-
                         val route = when (index) {
                             0 -> Screen.PopularMovieList.route
                             1 -> Screen.UpcomingMovieList.route
-                            else -> Screen.AsianMovieList.route
+                            2 -> Screen.AsianMovieList.route
+                            else -> Screen.AsianDramaList.route
                         }
                         bottomNavController.navigate(route) {
                             launchSingleTop = true
@@ -195,6 +288,9 @@ fun BottomNavigationBar(
         }
     }
 }
+
+// Data class for bottom navigation items
+// Holds the title and icon for each tab
 
 data class BottomItem(
     val title: String,

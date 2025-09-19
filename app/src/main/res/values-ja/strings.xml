@@ -8,5 +8,6 @@
     <string name="release_date">公開日: </string>
     <string name="votes"> 投票</string>
     <string name="overview">概要</string>
-    <string name="asian">アジア</string>
+    <string name="asian_movie">アジア映画</string>
+    <string name="asian_drama">アジアドラマ</string>
 </resources>
