@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -13,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.os.LocaleListCompat
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -35,36 +38,46 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    // Ensure this Activity is born with the saved locale
+    // Attach locale to context for language support
     override fun attachBaseContext(newBase: Context) {
         val saved = LanguagePrefs.get(newBase) // "en", "ko", "ja", "zh-HK"
         val wrapped = if (saved.isNotBlank()) LocaleHelper.wrapWithLocale(newBase, saved) else newBase
         super.attachBaseContext(wrapped)
     }
 
+    // Main entry point: sets up edge-to-edge, theme, and navigation
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Also apply per-app locales (AppCompat) to persist + help other components
+        // Set app locale for all components
         val saved = LanguagePrefs.get(this)
         if (saved.isNotBlank()) {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(saved))
         }
 
+        // Enable edge-to-edge display for all Android versions
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContent {
             MoviesappTheme {
-                SetBarColor(color = MaterialTheme.colorScheme.inverseOnSurface)
+                // Set system bar color to transparent for edge-to-edge
+                SetBarColor(color = Color.Transparent)
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // Handle system bar insets so content is not obscured
+                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.systemBars),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
+                    // Navigation graph for all screens
                     NavHost(
                         navController = navController,
                         startDestination = Screen.Home.route
                     ) {
+                        // Home screen
                         composable(Screen.Home.route) {
                             HomeScreen(navController)
                         }
+                        // Language selection screen
                         composable("Language_screen_route") {
                             LanguageSelectionScreen { selectedLanguage ->
                                 LanguagePrefs.set(this@MainActivity, selectedLanguage)
@@ -72,16 +85,19 @@ class MainActivity : ComponentActivity() {
                                 recreate()
                             }
                         }
+                        // Movie details screen
                         composable(
                             Screen.Details.route + "/{movieId}",
                             arguments = listOf(navArgument("movieId") { type = NavType.IntType })
                         ) {
                             DetailsScreen(navController)
                         }
+                        // Favorite movies screen
                         composable("favorite_movies") {
                             val vm = hiltViewModel<FavoriteMoviesViewModel>()
                             FavoriteMoviesScreen(vm, navController)
                         }
+                        // Asian movies screen
                         composable("asian_movies") {
                             val favVm = hiltViewModel<FavoriteMoviesViewModel>()
                             val asianVm = hiltViewModel<AsianMovieViewModel>()
@@ -91,6 +107,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel = asianVm
                             )
                         }
+                        // Asian drama screen
                         composable(Screen.AsianDramaList.route) {
                             val favVm = hiltViewModel<FavoriteMoviesViewModel>()
                             AsianDramaScreen(
@@ -104,9 +121,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Sets system bar color using accompanist SystemUiController
     @Composable
     private fun SetBarColor(color: Color) {
         val systemUiController = rememberSystemUiController()
-        LaunchedEffect(color) { systemUiController.setSystemBarsColor(color) }
+        LaunchedEffect(color) {
+            systemUiController.setSystemBarsColor(color = color, darkIcons = true)
+        }
     }
 }
