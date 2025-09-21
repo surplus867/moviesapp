@@ -59,29 +59,31 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstan
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
+import androidx.core.net.toUri
 
 // Composable to display a Youtube trailer using the YouTubePlayerView
 @Composable
 fun YouTubeTrailerPlayer(trailerKey: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    // Use AndroidView to embed the YouTubePlayerView in Compose
     AndroidView(factory = { ctx ->
         YouTubePlayerView(ctx).apply {
+            // Add a listener to handle YouTube player events
             addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
+                // When the player is ready, load the video using the trailer key
                 override fun onReady(youTubePlayer: com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer) {
                     youTubePlayer.loadVideo(trailerKey, 0f)
                 }
+                // If an error occurs, show a Toast message only
                 override fun onError(
                     youTubePlayer: com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer,
                     error: PlayerConstants.PlayerError
                 ) {
-                    // Fallback: open in YouTube app or browser
-                    val appIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("vnd.youtube:$trailerKey"))
-                    val webIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.youtube.com/watch?v=$trailerKey"))
-                    try {
-                        context.startActivity(appIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                    } catch (_: android.content.ActivityNotFoundException) {
-                        context.startActivity(webIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                    }
+                    android.widget.Toast.makeText(
+                        context,
+                        "Trailer cannot be played here. Please use the Watch on YouTube button.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
                 }
             })
         }
@@ -101,15 +103,13 @@ fun DetailsScreen(navController: NavController) {
     val detailsState = detailsViewModel.detailsState.collectAsState().value
     val reviews by detailsViewModel.reviews.collectAsState(emptyList<MovieReviewEntity>())
 
-    // Load images using Coil
+    // Load images using Coil for backdrop and poster
     val backDropImageState = rememberAsyncImagePainter(
         model = ImageRequest.Builder(LocalContext.current)
             .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.backdrop_path)
             .size(Size.ORIGINAL)
             .build()
     ).state
-
-    // Fetch the poster image using Coil and remember its state
     val posterImageState = rememberAsyncImagePainter(
         model = ImageRequest.Builder(LocalContext.current)
             .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.poster_path)
@@ -159,7 +159,6 @@ fun DetailsScreen(navController: NavController) {
                 )
             }
         }
-
         // Display backdrop image if loading is successful
         if (backDropImageState is AsyncImagePainter.State.Success) {
             Image(
@@ -171,8 +170,6 @@ fun DetailsScreen(navController: NavController) {
                 contentScale = ContentScale.Crop
             )
         }
-
-        // Spacer for visual separation
         Spacer(modifier = Modifier.height(16.dp))
 
         // Row containing poster image and movie details
@@ -187,7 +184,7 @@ fun DetailsScreen(navController: NavController) {
                     .width(160.dp)
                     .height(240.dp)
             ) {
-                // Display placeholder or error message if poser image loading fails
+                // Display placeholder or error message if poster image loading fails
                 if (posterImageState is AsyncImagePainter.State.Error) {
                     Box(
                         modifier = Modifier
@@ -203,7 +200,7 @@ fun DetailsScreen(navController: NavController) {
                         )
                     }
                 }
-                // Display poser image if loading is successful
+                // Display poster image if loading is successful
                 if (posterImageState is AsyncImagePainter.State.Success) {
                     Image(
                         modifier = Modifier
@@ -215,8 +212,7 @@ fun DetailsScreen(navController: NavController) {
                     )
                 }
             }
-
-            // Movie details
+            // Movie details column
             detailsState.movie?.let { movie ->
                 Column(
                     modifier = Modifier.fillMaxWidth()
@@ -227,22 +223,16 @@ fun DetailsScreen(navController: NavController) {
                         fontSize = 19.sp,
                         fontWeight = FontWeight.SemiBold
                     )
-
-                    // Spacer for visual separation
                     Spacer(modifier = Modifier.height(16.dp))
-
                     // Row containing rating and rating value
                     Row(
                         modifier = Modifier
                             .padding(start = 16.dp)
                     ) {
-                        // Custom Ratingbar component
                         RatingBar(
                             starsModifier = Modifier.size(18.dp),
                             rating = movie.vote_average / 2
                         )
-
-                        // Display the numeric rating value
                         Text(
                             modifier = Modifier.padding(start = 4.dp),
                             text = movie.vote_average.toString().take(3),
@@ -251,35 +241,21 @@ fun DetailsScreen(navController: NavController) {
                             maxLines = 1,
                         )
                     }
-
-                    // Spacer for visual separation
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    // Display original language
                     Text(
                         modifier = Modifier.padding(start = 16.dp),
                         text = "${stringResource(R.string.language)} ${movie.original_language}"
                     )
-
-                    // Spacer for visual separation
                     Spacer(modifier = Modifier.height(10.dp))
-
-                    // Display release date
                     Text(
                         modifier = Modifier.padding(start = 16.dp),
                         text = stringResource(R.string.release_date) + movie.release_date
                     )
-
-                    // Spacer for visual separation
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    // Display release date and votes
                     Text(
                         modifier = Modifier.padding(start = 16.dp),
                         text = "${movie.release_date} ${stringResource(R.string.votes)}"
                     )
-
-                    // Add to Favorites Button
                     Button(
                         modifier = Modifier.padding(start = 16.dp, top = 12.dp),
                         enabled = detailsState.movie.title.isNotBlank(),
@@ -297,10 +273,7 @@ fun DetailsScreen(navController: NavController) {
                 }
             }
         }
-
-        // Spacer for visual separation
         Spacer(modifier = Modifier.height(32.dp))
-
         // Display section title for movie overview
         Text(
             modifier = Modifier.padding(start = 16.dp),
@@ -308,10 +281,7 @@ fun DetailsScreen(navController: NavController) {
             fontSize = 19.sp,
             fontWeight = FontWeight.SemiBold
         )
-
-        // Spacer for visual separation
         Spacer(modifier = Modifier.height(8.dp))
-
         // Display movie overview
         detailsState.movie?.let {
             Text(
@@ -320,11 +290,10 @@ fun DetailsScreen(navController: NavController) {
                 fontSize = 16.sp,
             )
         }
-
         Spacer(modifier = Modifier.height(32.dp))
-
-        // Trailers section
-        detailsState.movie?.trailers?.firstOrNull()?.let { trailer ->
+        // Trailers section: embed trailer and provide fallback button
+        val validTrailer = detailsState.movie?.trailers?.firstOrNull { it.key?.isNotBlank() == true }
+        if (validTrailer != null) {
             Spacer(modifier = Modifier.height(24.dp))
             Text(
                 modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
@@ -332,10 +301,38 @@ fun DetailsScreen(navController: NavController) {
                 fontSize = 19.sp,
                 fontWeight = FontWeight.SemiBold
             )
+            // Embed the YouTube trailer
             YouTubeTrailerPlayer(
-                trailerKey = trailer.key ?: "",
-                modifier = Modifier
-                    .padding(horizontal = 16.dp) // Add side padding
+                trailerKey = validTrailer.key ?: "",
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            // Always show a fallback button to open in YouTube app/browser
+            val context = LocalContext.current
+            Button(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                onClick = {
+                    val appIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("vnd.youtube:${validTrailer.key}"))
+                    val webIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.youtube.com/watch?v=${validTrailer.key}"))
+                    try {
+                        context.startActivity(appIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    } catch (_: android.content.ActivityNotFoundException) {
+                        context.startActivity(webIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }
+            ) {
+                Text("Watch on YouTube")
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        } else {
+            Spacer(modifier = Modifier.height(24.dp))
+            // Show a message if no trailer is available
+            Text(
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                text = "Trailer not available",
+                fontSize = 19.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Gray
             )
             Spacer(modifier = Modifier.height(24.dp))
         }
