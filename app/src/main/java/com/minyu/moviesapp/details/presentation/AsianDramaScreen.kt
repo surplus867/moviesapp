@@ -72,7 +72,6 @@ fun AsianDramaScreen(
                 else -> {
                     LazyColumn {
                         items(uiState.dramas) { drama ->
-                            // Card for each drama, clickable to navigate to details
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -109,7 +108,6 @@ fun AsianDramaScreen(
                                     }
                                 }
                             }
-                            // Divider between drama cards
                             HorizontalDivider(
                                 Modifier,
                                 DividerDefaults.Thickness,

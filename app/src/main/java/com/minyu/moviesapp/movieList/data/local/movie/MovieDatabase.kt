@@ -11,7 +11,8 @@ import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
 
 @Database(
     entities = [MovieEntity::class, FavoriteMovieEntity::class, MovieRatingEntity::class, MovieReviewEntity::class],
-    version = 8
+    version = 8,
+    exportSchema = false
 )
 abstract class MovieDatabase : RoomDatabase() {
     abstract fun movieDao(): MovieDao

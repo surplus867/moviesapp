@@ -55,17 +55,33 @@ import com.minyu.moviesapp.R
 import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
 import com.minyu.moviesapp.movieList.util.RatingBar
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 
 // Composable to display a Youtube trailer using the YouTubePlayerView
 @Composable
 fun YouTubeTrailerPlayer(trailerKey: String, modifier: Modifier = Modifier) {
-    AndroidView(factory = { context ->
-        YouTubePlayerView(context).apply {
+    val context = LocalContext.current
+    AndroidView(factory = { ctx ->
+        YouTubePlayerView(ctx).apply {
             addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
                 override fun onReady(youTubePlayer: com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer) {
                     youTubePlayer.loadVideo(trailerKey, 0f)
+                }
+                override fun onError(
+                    youTubePlayer: com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer,
+                    error: PlayerConstants.PlayerError
+                ) {
+                    // Fallback: open in YouTube app or browser
+                    val appIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("vnd.youtube:$trailerKey"))
+                    val webIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.youtube.com/watch?v=$trailerKey"))
+                    try {
+                        context.startActivity(appIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    } catch (_: android.content.ActivityNotFoundException) {
+                        context.startActivity(webIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
                 }
             })
         }
