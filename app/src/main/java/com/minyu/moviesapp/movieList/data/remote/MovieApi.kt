@@ -58,6 +58,6 @@ interface MovieApi {
         // Base URL for movie images
         const val IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"
         // API key for authentication (should be set securely)
-        const val API_KEY = "05663a72e30277317e18431232478d06"
+        const val API_KEY = ""
     }
 }
