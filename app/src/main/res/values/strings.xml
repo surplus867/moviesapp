@@ -11,4 +11,5 @@
     <string name="asian_movie" translatable="false">Asian Movie</string>
     <string name="asian_drama" translatable="false">Asian Drama</string>
     <string name="selected_language" translatable="false">Selected Language</string>
+    <string name="asian" translatable="false">Asian</string>
 </resources>

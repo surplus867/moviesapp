@@ -1,12 +1,14 @@
 <resources>
-    <string name="app_name">映画アプリ</string>
-    <string name="popular">人気</string>
+    <string name="app_name">電影應用程式</string>
+    <string name="popular">熱門</string>
     <string name="upcoming">近日公開</string>
-    <string name="popular_movies">人気映画</string>
-    <string name="upcoming_movies">近日公開映画</string>
+    <string name="popular_movies">熱門電影</string>
+    <string name="upcoming_movies">近日公開電影</string>
     <string name="language">言語: </string>
     <string name="release_date">公開日: </string>
     <string name="votes"> 投票</string>
     <string name="overview">概要</string>
-    <string name="asian">アジア</string>
+    <string name="asian">亞洲</string>
+    <string name="asian_movie">亞洲電影</string>
+    <string name="asian_drama">亞洲劇集</string>
 </resources>

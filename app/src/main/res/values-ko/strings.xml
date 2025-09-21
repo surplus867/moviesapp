@@ -9,4 +9,6 @@
     <string name="votes"> 투표</string>
     <string name="overview">개요</string>
     <string name="asian">아시아</string>
+    <string name="asian_movie">아시아 영화</string>
+    <string name="asian_drama">아시아 드라마</string>
 </resources>
