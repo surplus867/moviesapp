@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBars
@@ -15,7 +16,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.os.LocaleListCompat
-import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -47,14 +47,13 @@ class MainActivity : ComponentActivity() {
 
     // Main entry point: sets up edge-to-edge, theme, and navigation
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Set app locale for all components
         val saved = LanguagePrefs.get(this)
         if (saved.isNotBlank()) {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(saved))
         }
 
-        // Enable edge-to-edge display for all Android versions
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // Enable edge-to-edge for all Android versions (recommended by Google)
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             MoviesappTheme {
