@@ -56,10 +56,10 @@ import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
 import com.minyu.moviesapp.movieList.util.RatingBar
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
-import androidx.core.net.toUri
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 // Composable to display a Youtube trailer using the YouTubePlayerView
 @Composable
@@ -93,6 +93,19 @@ fun YouTubeTrailerPlayer(trailerKey: String, modifier: Modifier = Modifier) {
             .height(220.dp)
             .clip(RoundedCornerShape(12.dp))
     )
+}
+
+// Helper function to format release date nicely
+fun formatReleaseDate(dateString: String?): String {
+    if (dateString.isNullOrBlank()) return ""
+    return try {
+        val parser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val formatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+        val date = parser.parse(dateString)
+        if (date != null) formatter.format(date) else dateString
+    } catch (e: Exception) {
+        dateString
+    }
 }
 
 // Main details screen composable
@@ -249,12 +262,13 @@ fun DetailsScreen(navController: NavController) {
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         modifier = Modifier.padding(start = 16.dp),
-                        text = stringResource(R.string.release_date) + movie.release_date
+                        text = stringResource(R.string.release_date) + " " + formatReleaseDate(movie.release_date)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         modifier = Modifier.padding(start = 16.dp),
-                        text = "${movie.release_date} ${stringResource(R.string.votes)}"
+                        // Show the votes label followed by the rating value
+                        text = stringResource(R.string.votes) + ": " + movie.vote_average.toString().take(3)
                     )
                     Button(
                         modifier = Modifier.padding(start = 16.dp, top = 12.dp),
