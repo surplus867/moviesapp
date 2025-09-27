@@ -99,10 +99,16 @@ fun YouTubeTrailerPlayer(trailerKey: String, modifier: Modifier = Modifier) {
 fun formatReleaseDate(dateString: String?): String {
     if (dateString.isNullOrBlank()) return ""
     return try {
-        val parser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val formatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+        val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         val date = parser.parse(dateString)
-        if (date != null) formatter.format(date) else dateString
+        if (date != null) {
+            val cal = java.util.Calendar.getInstance()
+            cal.time = date
+            val month = SimpleDateFormat("MMM", Locale.US).format(date)
+            val day = cal.get(java.util.Calendar.DAY_OF_MONTH)
+            val year = cal.get(java.util.Calendar.YEAR)
+            "$month $day $year"
+        } else dateString
     } catch (e: Exception) {
         dateString
     }
@@ -262,7 +268,8 @@ fun DetailsScreen(navController: NavController) {
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         modifier = Modifier.padding(start = 16.dp),
-                        text = stringResource(R.string.release_date) + " " + formatReleaseDate(movie.release_date)
+                        text = stringResource(R.string.release_date) + " " + formatReleaseDate(movie.release_date),
+                        maxLines = 1
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
