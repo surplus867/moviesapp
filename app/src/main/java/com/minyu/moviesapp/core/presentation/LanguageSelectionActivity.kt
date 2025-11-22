@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -29,39 +30,58 @@ import com.minyu.moviesapp.core.LanguagePrefs
 import com.minyu.moviesapp.core.MainActivity
 
 /**
- * Lets the user pick a language; persists + applies, then relaunches MainActivity.
+ * Activity that lets the user pick an app language, persists the choice,
+ * applies it and then relaunches MainActivity so UI strings reload.
  */
 class LanguageSelectionActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // If there is a saved language, apply it so this screen is localized too
+        // If there is a saved language, apply it so this screen's strings are localize too.
+        // Wrap it in try/catch to avoid crashing if locale application fails.
         try {
             LanguagePrefs.applyAppLocale(this)
         } catch (t: Throwable) {
-            // fail safe - continue without crashing the activity
+            // Fail-safe: lof the throwable but keep the activity running.
             t.printStackTrace()
         }
 
         setContent {
+            // Composable content that shows the language list.
             LanguageSelectionScreen { languageCode ->
-                // Persist + apply per-app locales (no deprecated APIs)
-                LanguagePrefs.setAndApply(this, languageCode)
+                // Persist + apply per-app locales (no deprecated APIs).
+                // Use try/catch to be defective around persistence/ apply code.
+                try {
+                    LanguagePrefs.setAndApply(this, languageCode)
+                } catch (t: Throwable) {
+                    t.printStackTrace()
+                }
 
-                // Relaunch Main so strings reload in the new locale
+                // Relaunch Main so strings reload in the new locale.
                 startActivity(
                     Intent(this, MainActivity::class.java)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 )
-                finish()
+                finish() // Close the activity after launching main.
             }
         }
     }
 }
 
+/**
+ * Simple language selection UI Compose.
+ *
+ * Notes:
+ * - 'language is a small list of (languageCode, displayName) pairs.
+ * - Each language line is clickable; 'indication = null 'disables the ripple
+ *  as a temporary workaround for mixed Compose dependency issues (PlatformRipple
+ *  vs. IndicationNodeFactory mismatch). Keep 'interactionSource' for semantics.
+ */
+
 @Composable
 fun LanguageSelectionScreen(onLanguageSelected: (String) -> Unit) {
+    // Language offered to the user: pair of locale code and display name.
     val languages = listOf(
         "en" to "English",
         "zh-HK" to "繁體中文（香港）",
@@ -75,6 +95,7 @@ fun LanguageSelectionScreen(onLanguageSelected: (String) -> Unit) {
     ) {
         Spacer(Modifier.height(32.dp))
 
+        // App logo image
         Image(
             painter = painterResource(id = R.drawable.movie_logo),
             contentDescription = "App Logo",
@@ -82,15 +103,21 @@ fun LanguageSelectionScreen(onLanguageSelected: (String) -> Unit) {
         )
 
         Spacer(Modifier.height(24.dp))
+
+        // Title text (localized via string resources)
         Text(stringResource(id = R.string.selected_language), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(16.dp))
 
+        // Render each language as a full-width Text that is clickable.
         languages.forEach { (code, name) ->
+            // Remembered interaction source for click semantics (no ripple).
             val interactionSource = remember { MutableInteractionSource() }
             Text(
                 text = name,
                 modifier = Modifier
                     .fillMaxWidth()
+                    // Workaround: explicitly set 'indication = null' to avoid ripple crash
+                    // caused by mixed Compose versions. Remove when dependencies are aligned.
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null
