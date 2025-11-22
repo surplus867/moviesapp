@@ -170,356 +170,356 @@ fun YouTubeTrailerPlayer(trailerKey: String, modifier: Modifier = Modifier) {
     }
 }
 
-    // Helper function to format release date nicely
-    fun formatReleaseDate(dateString: String?): String {
-        if (dateString.isNullOrBlank()) return ""
-        return try {
-            val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val date = parser.parse(dateString)
-            if (date != null) {
-                val cal = java.util.Calendar.getInstance()
-                cal.time = date
-                val month = SimpleDateFormat("MMM", Locale.US).format(date)
-                val day = cal.get(java.util.Calendar.DAY_OF_MONTH)
-                val year = cal.get(java.util.Calendar.YEAR)
-                "$month $day $year"
-            } else dateString
-        } catch (e: Exception) {
-            dateString
-        }
+// Helper function to format release date nicely
+fun formatReleaseDate(dateString: String?): String {
+    if (dateString.isNullOrBlank()) return ""
+    return try {
+        val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val date = parser.parse(dateString)
+        if (date != null) {
+            val cal = java.util.Calendar.getInstance()
+            cal.time = date
+            val month = SimpleDateFormat("MMM", Locale.US).format(date)
+            val day = cal.get(java.util.Calendar.DAY_OF_MONTH)
+            val year = cal.get(java.util.Calendar.YEAR)
+            "$month $day $year"
+        } else dateString
+    } catch (e: Exception) {
+        dateString
     }
+}
 
-    // Main details screen composable
-    @Composable
-    fun DetailsScreen(navController: NavController) {
-        // Get ViewModel and state
-        val detailsViewModel = hiltViewModel<DetailsViewModel>()
-        val detailsState = detailsViewModel.detailsState.collectAsState().value
-        val reviews by detailsViewModel.reviews.collectAsState(emptyList<MovieReviewEntity>())
+// Main details screen composable
+@Composable
+fun DetailsScreen(navController: NavController) {
+    // Get ViewModel and state
+    val detailsViewModel = hiltViewModel<DetailsViewModel>()
+    val detailsState = detailsViewModel.detailsState.collectAsState().value
+    val reviews by detailsViewModel.reviews.collectAsState(emptyList<MovieReviewEntity>())
 
-        // Load images using Coil for backdrop and poster
-        val backDropImageState = rememberAsyncImagePainter(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.backdrop_path)
-                .size(Size.ORIGINAL)
-                .build()
-        ).state
-        val posterImageState = rememberAsyncImagePainter(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.poster_path)
-                .size(Size.ORIGINAL)
-                .build()
-        ).state
+    // Load images using Coil for backdrop and poster
+    val backDropImageState = rememberAsyncImagePainter(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.backdrop_path)
+            .size(Size.ORIGINAL)
+            .build()
+    ).state
+    val posterImageState = rememberAsyncImagePainter(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.poster_path)
+            .size(Size.ORIGINAL)
+            .build()
+    ).state
 
-        var reviewText by remember { mutableStateOf("") }
+    var reviewText by remember { mutableStateOf("") }
 
-        // Main vertical layout with scroll
-        Column(
+    // Main vertical layout with scroll
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        // Top bar with back button and title
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .fillMaxWidth()
+                .padding(WindowInsets.statusBars.asPaddingValues())
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Top bar with back button and title
-            Row(
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Text(
+                text = detailsState.movie?.title ?: "",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        // Backdrop image or placeholder
+        if (backDropImageState is AsyncImagePainter.State.Error) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(WindowInsets.statusBars.asPaddingValues())
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .height(220.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
             ) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-                Text(
-                    text = detailsState.movie?.title ?: "",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(start = 8.dp)
+                Icon(
+                    modifier = Modifier.size(70.dp),
+                    imageVector = Icons.Rounded.ImageNotSupported,
+                    contentDescription = detailsState.movie?.title
                 )
             }
+        }
+        // Display backdrop image if loading is successful
+        if (backDropImageState is AsyncImagePainter.State.Success) {
+            Image(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp),
+                painter = backDropImageState.painter,
+                contentDescription = detailsState.movie?.title,
+                contentScale = ContentScale.Crop
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
 
-            // Backdrop image or placeholder
-            if (backDropImageState is AsyncImagePainter.State.Error) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        modifier = Modifier.size(70.dp),
-                        imageVector = Icons.Rounded.ImageNotSupported,
-                        contentDescription = detailsState.movie?.title
+        // Row containing poster image and movie details
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Poster image or placeholder
+            Box(
+                modifier = Modifier
+                    .width(160.dp)
+                    .height(240.dp)
+            ) {
+                // Display placeholder or error message if poster image loading fails
+                if (posterImageState is AsyncImagePainter.State.Error) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(70.dp),
+                            imageVector = Icons.Rounded.ImageNotSupported,
+                            contentDescription = detailsState.movie?.title
+                        )
+                    }
+                }
+                // Display poster image if loading is successful
+                if (posterImageState is AsyncImagePainter.State.Success) {
+                    Image(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp)),
+                        painter = posterImageState.painter,
+                        contentDescription = detailsState.movie?.title,
+                        contentScale = ContentScale.Crop
                     )
                 }
             }
-            // Display backdrop image if loading is successful
-            if (backDropImageState is AsyncImagePainter.State.Success) {
-                Image(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp),
-                    painter = backDropImageState.painter,
-                    contentDescription = detailsState.movie?.title,
-                    contentScale = ContentScale.Crop
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Row containing poster image and movie details
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                // Poster image or placeholder
-                Box(
-                    modifier = Modifier
-                        .width(160.dp)
-                        .height(240.dp)
+            // Movie details column
+            detailsState.movie?.let { movie ->
+                Column(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Display placeholder or error message if poster image loading fails
-                    if (posterImageState is AsyncImagePainter.State.Error) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                modifier = Modifier.size(70.dp),
-                                imageVector = Icons.Rounded.ImageNotSupported,
-                                contentDescription = detailsState.movie?.title
-                            )
-                        }
-                    }
-                    // Display poster image if loading is successful
-                    if (posterImageState is AsyncImagePainter.State.Success) {
-                        Image(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(12.dp)),
-                            painter = posterImageState.painter,
-                            contentDescription = detailsState.movie?.title,
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                }
-                // Movie details column
-                detailsState.movie?.let { movie ->
-                    Column(
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        modifier = Modifier.padding(start = 16.dp),
+                        text = movie.title,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    // Row containing rating and rating value
+                    Row(
+                        modifier = Modifier
+                            .padding(start = 16.dp)
                     ) {
-                        Text(
-                            modifier = Modifier.padding(start = 16.dp),
-                            text = movie.title,
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.SemiBold
+                        RatingBar(
+                            starsModifier = Modifier.size(18.dp),
+                            rating = movie.vote_average / 2
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        // Row containing rating and rating value
-                        Row(
-                            modifier = Modifier
-                                .padding(start = 16.dp)
-                        ) {
-                            RatingBar(
-                                starsModifier = Modifier.size(18.dp),
-                                rating = movie.vote_average / 2
+                        Text(
+                            modifier = Modifier.padding(start = 4.dp),
+                            text = movie.vote_average.toString().take(3),
+                            color = Color.LightGray,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        modifier = Modifier.padding(start = 16.dp),
+                        text = "${stringResource(R.string.language)} ${movie.original_language}"
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        modifier = Modifier.padding(start = 16.dp),
+                        text = stringResource(R.string.release_date) + " " + formatReleaseDate(
+                            movie.release_date
+                        ),
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        modifier = Modifier.padding(start = 16.dp),
+                        // Show the votes label followed by the rating value
+                        text = stringResource(R.string.votes) + ": " + movie.vote_average.toString()
+                            .take(3)
+                    )
+                    Button(
+                        modifier = Modifier.padding(start = 16.dp, top = 12.dp),
+                        enabled = detailsState.movie.title.isNotBlank(),
+                        onClick = {
+                            detailsViewModel.addFavoriteMovie(
+                                movieId = movie.id,
+                                title = movie.title,
+                                posterUrl = movie.poster_path
                             )
-                            Text(
-                                modifier = Modifier.padding(start = 4.dp),
-                                text = movie.vote_average.toString().take(3),
-                                color = Color.LightGray,
-                                fontSize = 14.sp,
-                                maxLines = 1,
-                            )
+                            navController.navigate("favorite_movies")
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            modifier = Modifier.padding(start = 16.dp),
-                            text = "${stringResource(R.string.language)} ${movie.original_language}"
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            modifier = Modifier.padding(start = 16.dp),
-                            text = stringResource(R.string.release_date) + " " + formatReleaseDate(
-                                movie.release_date
-                            ),
-                            maxLines = 1
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            modifier = Modifier.padding(start = 16.dp),
-                            // Show the votes label followed by the rating value
-                            text = stringResource(R.string.votes) + ": " + movie.vote_average.toString()
-                                .take(3)
-                        )
-                        Button(
-                            modifier = Modifier.padding(start = 16.dp, top = 12.dp),
-                            enabled = detailsState.movie.title.isNotBlank(),
-                            onClick = {
-                                detailsViewModel.addFavoriteMovie(
-                                    movieId = movie.id,
-                                    title = movie.title,
-                                    posterUrl = movie.poster_path
-                                )
-                                navController.navigate("favorite_movies")
-                            }
-                        ) {
-                            Text("Add to Favorites")
-                        }
+                    ) {
+                        Text("Add to Favorites")
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(32.dp))
-            // Display section title for movie overview
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+        // Display section title for movie overview
+        Text(
+            modifier = Modifier.padding(start = 16.dp),
+            text = stringResource(R.string.overview),
+            fontSize = 19.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        // Display movie overview
+        detailsState.movie?.let {
             Text(
                 modifier = Modifier.padding(start = 16.dp),
-                text = stringResource(R.string.overview),
+                text = it.overview,
+                fontSize = 16.sp,
+            )
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+        // Trailers section: embed trailer and provide fallback button
+        val validTrailer =
+            detailsState.movie?.trailers?.firstOrNull { it.key?.isNotBlank() == true }
+        if (validTrailer != null) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                text = "Trailer",
                 fontSize = 19.sp,
                 fontWeight = FontWeight.SemiBold
+            )
+            // Embed the YouTube trailer
+            YouTubeTrailerPlayer(
+                trailerKey = validTrailer.key ?: "",
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            // Display movie overview
-            detailsState.movie?.let {
-                Text(
-                    modifier = Modifier.padding(start = 16.dp),
-                    text = it.overview,
-                    fontSize = 16.sp,
-                )
-            }
-            Spacer(modifier = Modifier.height(32.dp))
-            // Trailers section: embed trailer and provide fallback button
-            val validTrailer =
-                detailsState.movie?.trailers?.firstOrNull { it.key?.isNotBlank() == true }
-            if (validTrailer != null) {
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-                    text = "Trailer",
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                // Embed the YouTube trailer
-                YouTubeTrailerPlayer(
-                    trailerKey = validTrailer.key ?: "",
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                // Always show a fallback button to open in YouTube app/browser
-                val context = LocalContext.current
-                Button(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    onClick = {
-                        val appIntent = android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("vnd.youtube:${validTrailer.key}")
-                        )
-                        val webIntent = android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://www.youtube.com/watch?v=${validTrailer.key}")
-                        )
-                        try {
-                            context.startActivity(appIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                        } catch (_: android.content.ActivityNotFoundException) {
-                            context.startActivity(webIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                        }
+            // Always show a fallback button to open in YouTube app/browser
+            val context = LocalContext.current
+            Button(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                onClick = {
+                    val appIntent = android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("vnd.youtube:${validTrailer.key}")
+                    )
+                    val webIntent = android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://www.youtube.com/watch?v=${validTrailer.key}")
+                    )
+                    try {
+                        context.startActivity(appIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    } catch (_: android.content.ActivityNotFoundException) {
+                        context.startActivity(webIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
                     }
-                ) {
-                    Text("Watch on YouTube")
                 }
-                Spacer(modifier = Modifier.height(24.dp))
-            } else {
-                Spacer(modifier = Modifier.height(24.dp))
-                // Show a message if no trailer is available
+            ) {
+                Text("Watch on YouTube")
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        } else {
+            Spacer(modifier = Modifier.height(24.dp))
+            // Show a message if no trailer is available
+            Text(
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                text = "Trailer not available",
+                fontSize = 19.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Add Review Section
+        Text(
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp),
+            text = "Add a Review",
+            fontSize = 19.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        OutlinedTextField(
+            value = reviewText,
+            onValueChange = { reviewText = it },
+            label = { Text("Your review") },
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth()
+        )
+
+        Button(
+            onClick = {
+                detailsState.movie?.let { movie ->
+                    detailsViewModel.insertReview(
+                        MovieReviewEntity(
+                            movieId = movie.id,
+                            userName = "YourUserName",
+                            rating = 4.5f,
+                            comment = reviewText,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                    reviewText = ""
+                }
+            },
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth(),
+            enabled = reviewText.isNotBlank()
+        ) {
+            Text("Submit Review")
+        }
+
+        // Display submitted reviews
+        Text(
+            modifier = Modifier.padding(start = 16.dp, top = 24.dp),
+            text = "Reviews",
+            fontSize = 19.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        reviews.forEach { review ->
+            Column(modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)) {
+                Text(text = review.userName, fontWeight = FontWeight.Bold)
+                Text(text = "Rating: ${review.rating}")
+                Text(text = review.comment)
                 Text(
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-                    text = "Trailer not available",
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    text = java.text.SimpleDateFormat(
+                        "yyyy-MM-dd HH:mm",
+                        java.util.Locale.getDefault()
+                    )
+                        .format(java.util.Date(review.timestamp)),
+                    fontSize = 12.sp,
                     color = Color.Gray
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-
-            // Add Review Section
-            Text(
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp),
-                text = "Add a Review",
-                fontSize = 19.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            OutlinedTextField(
-                value = reviewText,
-                onValueChange = { reviewText = it },
-                label = { Text("Your review") },
-                modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .fillMaxWidth()
-            )
-
-            Button(
-                onClick = {
-                    detailsState.movie?.let { movie ->
-                        detailsViewModel.insertReview(
-                            MovieReviewEntity(
-                                movieId = movie.id,
-                                userName = "YourUserName",
-                                rating = 4.5f,
-                                comment = reviewText,
-                                timestamp = System.currentTimeMillis()
-                            )
-                        )
-                        reviewText = ""
-                    }
-                },
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .fillMaxWidth(),
-                enabled = reviewText.isNotBlank()
-            ) {
-                Text("Submit Review")
-            }
-
-            // Display submitted reviews
-            Text(
-                modifier = Modifier.padding(start = 16.dp, top = 24.dp),
-                text = "Reviews",
-                fontSize = 19.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            reviews.forEach { review ->
-                Column(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)) {
-                    Text(text = review.userName, fontWeight = FontWeight.Bold)
-                    Text(text = "Rating: ${review.rating}")
-                    Text(text = review.comment)
-                    Text(
-                        text = java.text.SimpleDateFormat(
-                            "yyyy-MM-dd HH:mm",
-                            java.util.Locale.getDefault()
-                        )
-                            .format(java.util.Date(review.timestamp)),
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
-                    // Add Delete button
-                    Button(
-                        onClick = { detailsViewModel.deleteReview(review.id) },
-                        modifier = Modifier.padding(top = 4.dp)
-                    ) {
-                        Text("Delete")
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
+                // Add Delete button
+                Button(
+                    onClick = { detailsViewModel.deleteReview(review.id) },
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text("Delete")
                 }
+                Spacer(modifier = Modifier.height(8.dp))
             }
-
-
-            // Add extra space at the bottom to avoid collision with the navigation bar
-            Spacer(modifier = Modifier.padding(WindowInsets.navigationBars.asPaddingValues()))
         }
+
+
+        // Add extra space at the bottom to avoid collision with the navigation bar
+        Spacer(modifier = Modifier.padding(WindowInsets.navigationBars.asPaddingValues()))
     }
+}

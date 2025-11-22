@@ -1,12 +1,14 @@
+
 package com.minyu.moviesapp.core.presentation
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -34,7 +37,12 @@ class LanguageSelectionActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // If there is a saved language, apply it so this screen is localized too
-        LanguagePrefs.applyAppLocale(this)
+        try {
+            LanguagePrefs.applyAppLocale(this)
+        } catch (t: Throwable) {
+            // fail safe - continue without crashing the activity
+            t.printStackTrace()
+        }
 
         setContent {
             LanguageSelectionScreen { languageCode ->
@@ -78,11 +86,15 @@ fun LanguageSelectionScreen(onLanguageSelected: (String) -> Unit) {
         Spacer(Modifier.height(16.dp))
 
         languages.forEach { (code, name) ->
+            val interactionSource = remember { MutableInteractionSource() }
             Text(
                 text = name,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onLanguageSelected(code) }
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null
+                    ) { onLanguageSelected(code) }
                     .padding(8.dp)
             )
         }
