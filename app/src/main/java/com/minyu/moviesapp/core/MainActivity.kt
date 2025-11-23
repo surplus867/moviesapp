@@ -22,9 +22,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.minyu.moviesapp.core.presentation.HomeScreen
 import com.minyu.moviesapp.core.presentation.LanguageSelectionScreen
+import com.minyu.moviesapp.core.presentation.SyncWorker
 import com.minyu.moviesapp.details.presentation.AsianDramaScreen
 import com.minyu.moviesapp.details.presentation.AsianMovieScreen
 import com.minyu.moviesapp.details.presentation.AsianMovieViewModel
@@ -34,6 +38,7 @@ import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import com.minyu.moviesapp.movieList.util.Screen
 import com.minyu.moviesapp.ui.theme.MoviesappTheme
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -56,6 +61,21 @@ class MainActivity : ComponentActivity() {
         // Enable edge-to-edge display for all Android versions
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
+
+        // create notification channel
+        NotificationHelper.createChannel(this)
+
+        // schedule periodic background sync every 12 hours
+        val periodicWork = PeriodicWorkRequestBuilder<SyncWorker>(12, TimeUnit.HOURS)
+            .build()
+
+        WorkManager.getInstance(applicationContext)
+            .enqueueUniquePeriodicWork(
+                "movies_periodic_sync",
+                ExistingPeriodicWorkPolicy.KEEP,
+                periodicWork
+            )
+
         setContent {
             MoviesappTheme {
                 // Set system bar color to transparent for edge-to-edge

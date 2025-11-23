@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name="com.minyu.moviesapp.App"
@@ -15,6 +16,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Moviesapp"
         tools:targetApi="31">
+
+        <!-- Optional: receiver to restart work on boot if not using WorkManager's default behavior -->
+        <receiver
+            android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".core.MainActivity"
             android:exported="true"
