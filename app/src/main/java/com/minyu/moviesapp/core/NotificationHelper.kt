@@ -1,4 +1,3 @@
-
 package com.minyu.moviesapp.core
 
 import android.Manifest
@@ -13,11 +12,15 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
+// Small helper for creating a notification channel and posting simple notifications.
+// Keep this file minimal — it handles channel creation (idempotent) and permission checks
+// for Android 13+ before posting notifications.
 object NotificationHelper {
     private const val CHANNEL_ID = "movies_app_channel"
     private const val CHANNEL_NAME = "Sync & Alerts"
     private const val CHANNEL_DESC = "Notifications for background sync and alerts"
 
+    // Create the channel if running on O+; safe to call repeatedly.
     fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -33,6 +36,7 @@ object NotificationHelper {
         }
     }
 
+    // Show a simple notification; checks POST_NOTIFICATIONS permission on Android 13+.
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     fun showNotification(context: Context, id: Int = 1, title: String, message: String) {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
@@ -42,6 +46,7 @@ object NotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
 
+        // If running on Android 13+, ensure app has POST_NOTIFICATIONS permission before notifying.
         val canNotify = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(
                 context,
