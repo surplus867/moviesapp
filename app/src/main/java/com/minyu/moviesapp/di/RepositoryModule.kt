@@ -1,5 +1,7 @@
 package com.minyu.moviesapp.di
 
+import com.minyu.moviesapp.core.data.TranslateRepository
+import com.minyu.moviesapp.core.data.TranslateRepositoryImpl
 import com.minyu.moviesapp.movieList.data.local.dao.FavoriteMovieDao
 import com.minyu.moviesapp.movieList.data.local.movie.MovieDatabase
 import com.minyu.moviesapp.movieList.data.repository.DatabaseFavoriteRepository
@@ -40,5 +42,11 @@ object DatabaseModule {
     @Singleton
     fun provideFavoriteMovieDao(database: MovieDatabase): FavoriteMovieDao {
         return database.favoriteMovieDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideTranslateRepository(): TranslateRepository {
+        return TranslateRepositoryImpl()
     }
 }

@@ -34,8 +34,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -69,6 +71,9 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.Abs
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.text.split
+import androidx.core.net.toUri
+
 
 // Composable to display a Youtube trailer using the YouTubePlayerView
 @Composable
@@ -78,7 +83,7 @@ fun YouTubeTrailerPlayer(trailerKey: String, modifier: Modifier = Modifier) {
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Persist playback position and fullscreen flag across recompositions/config changes
-    val currentSecond = rememberSaveable { mutableStateOf(0f) }
+    val currentSecond = rememberSaveable { mutableFloatStateOf(0f) }
     val isFullScreen = rememberSaveable { mutableStateOf(false) }
 
     // Hold references to player and view to control them from lifecycle callbacks and UI
@@ -191,11 +196,64 @@ fun formatReleaseDate(dateString: String?): String {
 
 // Main details screen composable
 @Composable
-fun DetailsScreen(navController: NavController) {
+fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
     // Get ViewModel and state
     val detailsViewModel = hiltViewModel<DetailsViewModel>()
+    val translateViewModel = hiltViewModel<DetailsTranslateViewModel>()
     val detailsState = detailsViewModel.detailsState.collectAsState().value
     val reviews by detailsViewModel.reviews.collectAsState(emptyList<MovieReviewEntity>())
+
+    val translated by translateViewModel.translatedPlot.collectAsState(initial = null)
+    val original = detailsState.movie?.overview ?: ""
+
+    // normalize selected/target language for translator
+    val normalizedTargetLang = when (selectedLang.lowercase(Locale.ROOT)) {
+        "zh" -> "zh-CN"
+        else -> selectedLang
+    }
+    // short code to send to translator (many translator APIS expect the 2-letter code)
+    val translatorTargetLang =
+        normalizedTargetLang.split("-").firstOrNull().orEmpty().lowercase(Locale.ROOT)
+
+    // Trigger translation when overview or selected language changes
+    LaunchedEffect(
+        detailsState.movie?.id,
+        normalizedTargetLang,
+        detailsState.movie?.original_language
+    ) {
+        val movie = detailsState.movie ?: return@LaunchedEffect
+        val movieOverview = movie.overview.orEmpty()
+        val movieOriginLang = movie.original_language.orEmpty()
+        val moviePrefix = movieOriginLang.split("-").firstOrNull().orEmpty().lowercase(Locale.ROOT)
+        val targetPrefix =
+            normalizedTargetLang.split("-").firstOrNull().orEmpty().lowercase(Locale.ROOT)
+
+        val sameLang = movieOriginLang.equals(normalizedTargetLang, ignoreCase = true) ||
+                moviePrefix == targetPrefix
+
+        // debug log to verify trigger conditions
+        android.util.Log.d(
+            "DetailsScreen",
+            "translate trigger overviewPresent=${movieOverview.isNotBlank()} sameLang=$sameLang origin=$movieOriginLang target=$translatorTargetLang"
+        )
+
+        if (movieOverview.isNotBlank() && !sameLang) {
+         // use the normalized full target (e.g. "zh-CN") and the full origin if available
+            val sourceForApi = movieOriginLang.takeIf { it.isNotBlank() } ?: moviePrefix
+            val targetForApi = normalizedTargetLang
+
+            android.util.Log.d(
+                "DetailsScreen",
+                "calling translateViewModel.translatePlot len=${movieOverview.length} source=$sourceForApi target=$targetForApi"
+            )
+
+            translateViewModel.translatePlot(
+                movieOverview,
+                targetLang = targetForApi,
+                sourceLang = sourceForApi
+            )
+        }
+    }
 
     // Load images using Coil for backdrop and poster
     val backDropImageState = rememberAsyncImagePainter(
@@ -309,11 +367,12 @@ fun DetailsScreen(navController: NavController) {
             // Movie details column
             detailsState.movie?.let { movie ->
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp)
                 ) {
                     Text(
-                        modifier = Modifier.padding(start = 16.dp),
-                        text = movie.title,
+                        text = stringResource(R.string.overview),
                         fontSize = 19.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -336,6 +395,14 @@ fun DetailsScreen(navController: NavController) {
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
+
+                    val languageDisplay = try {
+                        val code = movie.original_language
+                        if (code.isBlank()) code else Locale(code).displayLanguage
+                    } catch (e: Exception) {
+                        movie.original_language
+                    }
+
                     Text(
                         modifier = Modifier.padding(start = 16.dp),
                         text = "${stringResource(R.string.language)} ${movie.original_language}"
@@ -382,10 +449,23 @@ fun DetailsScreen(navController: NavController) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         // Display movie overview
-        detailsState.movie?.let {
+        detailsState.movie?.let { movie ->
+            // debug log to inspect translated value
+            android.util.Log.d(
+                "DetailsScreen",
+                "translated value (preview): ${translated?.take(200)}"
+            )
+
+            // detect when API returned identical text (likely failure / unsupported mapping)
+            if (translated != null && translated!!.trim() == movie.overview.trim()) {
+                android.util.Log.w("DetailsScreen", "translation identical to original — likely API returned unchanged text")
+            }
+
+            val preferred = translated?.takeIf { it.isNotBlank() } ?: movie.overview
+
             Text(
                 modifier = Modifier.padding(start = 16.dp),
-                text = it.overview,
+                text = preferred,
                 fontSize = 16.sp,
             )
         }
@@ -414,11 +494,11 @@ fun DetailsScreen(navController: NavController) {
                 onClick = {
                     val appIntent = android.content.Intent(
                         android.content.Intent.ACTION_VIEW,
-                        android.net.Uri.parse("vnd.youtube:${validTrailer.key}")
+                        "vnd.youtube:${validTrailer.key}".toUri()
                     )
                     val webIntent = android.content.Intent(
                         android.content.Intent.ACTION_VIEW,
-                        android.net.Uri.parse("https://www.youtube.com/watch?v=${validTrailer.key}")
+                        "https://www.youtube.com/watch?v=${validTrailer.key}".toUri()
                     )
                     try {
                         context.startActivity(appIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -492,9 +572,11 @@ fun DetailsScreen(navController: NavController) {
         )
 
         reviews.forEach { review ->
-            Column(modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
                 Text(text = review.userName, fontWeight = FontWeight.Bold)
                 Text(text = "Rating: ${review.rating}")
                 Text(text = review.comment)
