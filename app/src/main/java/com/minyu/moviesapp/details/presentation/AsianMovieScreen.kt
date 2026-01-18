@@ -32,6 +32,8 @@ import androidx.navigation.NavHostController
 import androidx.compose.ui.platform.LocalContext
 import com.minyu.moviesapp.movieList.presentation.components.MovieItem
 import com.minyu.moviesapp.core.util.ConnectivityObserver
+import com.minyu.moviesapp.core.LanguagePrefs
+import java.util.Locale
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -51,6 +53,16 @@ fun AsianMovieScreen(
     val isOnline by connectivityObserver.isOnline.collectAsState(initial = true)
     val offlineToastShownState = remember { mutableStateOf(false) }
 
+    // Determine localized offline message based on saved app language (fall back to device default)
+    val savedLangTag = try { LanguagePrefs.get(context).ifBlank { Locale.getDefault().toLanguageTag() } } catch (_: Exception) { Locale.getDefault().toLanguageTag() }
+    val langPrefix = savedLangTag.split("-").firstOrNull()?.lowercase(Locale.ROOT) ?: Locale.getDefault().language
+    val offlineMessage = when (langPrefix) {
+        "zh", "zh-cn", "zh-hk", "zh-tw" -> "無網路，無法載入亞洲電影"
+        "ko" -> "인터넷에 연결되어 있지 않습니다. 아시아 영화를 불러올 수 없습니다."
+        "ja" -> "インターネットに接続されていません。アジアの映画を読み込めません。"
+        else -> "Unable to load asian movies, no internet connection"
+    }
+
     // Single LaunchedEffect: reset flag when online; show the toast when offline and either loading or we don't have movies
     LaunchedEffect(isOnline, state.value.isLoading, state.value.movies.size) {
         android.util.Log.d(
@@ -67,7 +79,7 @@ fun AsianMovieScreen(
         android.util.Log.d("AsianMovieScreen", "shouldNotify=$shouldNotify")
         if (shouldNotify && !offlineToastShownState.value) {
             android.util.Log.d("AsianMovieScreen", "showing offline toast")
-            android.widget.Toast.makeText(context, "Unable to load asian movies, no internet connection", android.widget.Toast.LENGTH_LONG).show()
+            android.widget.Toast.makeText(context, offlineMessage, android.widget.Toast.LENGTH_LONG).show()
             offlineToastShownState.value = true
         }
     }
@@ -76,7 +88,7 @@ fun AsianMovieScreen(
     if (!isOnline && state.value.movies.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                text = "Unable to load asian movies, no internet connection",
+                text = offlineMessage,
                 color = Color.Black
             )
         }
@@ -95,7 +107,7 @@ fun AsianMovieScreen(
             state.value.isLoading -> {
                 if (!isOnline) {
                     Text(
-                        text = "Unable to load asian movies, no internet connection",
+                        text = offlineMessage,
                         modifier = Modifier.align(Alignment.Center),
                         color = Color.Black
                     )

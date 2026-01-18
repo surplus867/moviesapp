@@ -25,6 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.minyu.moviesapp.core.util.ConnectivityObserver
+import com.minyu.moviesapp.core.LanguagePrefs
+import java.util.Locale
 import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import com.minyu.moviesapp.movieList.presentation.components.MovieItem
 import com.minyu.moviesapp.movieList.util.Category
@@ -47,6 +49,16 @@ fun PopularMoviesScreen(
     val isOnline by connectivityObserver.isOnline.collectAsState(initial = true)
     val offlineToastShownState = remember { mutableStateOf(false) }
 
+    // Determine the localized offline message based on saved app language
+    val savedLangTag = try { LanguagePrefs.get(context).ifBlank { Locale.getDefault().toLanguageTag() } } catch (_: Exception) { Locale.getDefault().toLanguageTag() }
+    val langPrefix = savedLangTag.split("-").firstOrNull()?.lowercase(Locale.ROOT) ?: Locale.getDefault().language
+    val offlineMessage = when (langPrefix) {
+        "zh", "zh-cn", "zh-hk", "zh-tw" -> "無網路，無法載入電影"
+        "ko" -> "인터넷에 연결되어 있지 않습니다. 영화를 불러올 수 없습니다."
+        "ja" -> "インターネットに接続されていません。映画を読み込めません。"
+        else -> "No internet, unable to load movies"
+    }
+
     // Reset the offline toast flag when we come back online so future outages will show the toast
     LaunchedEffect(isOnline) {
         if (isOnline) {
@@ -66,7 +78,7 @@ fun PopularMoviesScreen(
         if (!isOnline) {
             LaunchedEffect(isOnline) {
                 if (!offlineToastShownState.value) {
-                    android.widget.Toast.makeText(context, "No internet, unable to load movies", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(context, offlineMessage, android.widget.Toast.LENGTH_LONG).show()
                     offlineToastShownState.value = true
                 }
             }
@@ -74,7 +86,7 @@ fun PopularMoviesScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "No internet, unable to load movies")
+                Text(text = offlineMessage)
             }
             return
         }

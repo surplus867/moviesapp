@@ -52,7 +52,12 @@ class AsianDramaViewModel @Inject constructor(
                     when (result) {
                         is Resource.Loading -> _uiState.update { it.copy(isLoading = result.isLoading) }
                         is Resource.Success -> _uiState.update { it.copy(dramas = result.data ?: emptyList(), isLoading = false) }
-                        is Resource.Error -> _uiState.update { it.copy(error = result.message, isLoading = false) }
+                        is Resource.Error -> {
+                            // Use a consistent user-facing message for Asian dramas
+                            // Keep the repository error in logs for debugging
+                            android.util.Log.e("AsianDramaViewModel", "repository error: ${result.message}")
+                            _uiState.update { it.copy(error = "Error loading Asian dramas", isLoading = false) }
+                        }
                     }
                 }
         }

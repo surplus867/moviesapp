@@ -10,4 +10,5 @@
     <string name="overview">概要</string>
     <string name="asian_movie">アジア映画</string>
     <string name="asian_drama">アジアドラマ</string>
+    <string name="error_loading_asian_dramas">エラー: アジアのドラマを読み込めません</string>
 </resources>

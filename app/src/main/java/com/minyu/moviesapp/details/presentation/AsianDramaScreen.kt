@@ -32,11 +32,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.minyu.moviesapp.R
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -65,9 +67,9 @@ fun AsianDramaScreen(
                 uiState.isLoading -> {
                     CircularProgressIndicator(modifier = Modifier.padding(32.dp))
                 }
-                // Show error message if there is an error
+                // Show error message if there is an error (use localized string)
                 uiState.error != null -> {
-                    Text("Error: ${uiState.error}", color = Color.Black)
+                    Text(stringResource(R.string.error_loading_asian_dramas), color = Color.Black)
                 }
                 // Show the list of dramas if data is loaded
                 else -> {

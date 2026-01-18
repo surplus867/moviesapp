@@ -24,6 +24,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
 import com.minyu.moviesapp.core.util.ConnectivityObserver
+import com.minyu.moviesapp.core.LanguagePrefs
+import java.util.Locale
 
 
 @Composable
@@ -38,6 +40,16 @@ fun UpcomingMoviesScreen(
     val connectivityObserver = remember { ConnectivityObserver(context) }
     val isOnline by connectivityObserver.isOnline.collectAsState(initial = true)
     val offlineToastShownState = remember { mutableStateOf(false) }
+
+    // Determine the localized offline message based on saved app language
+    val savedLangTag = try { LanguagePrefs.get(context).ifBlank { Locale.getDefault().toLanguageTag() } } catch (_: Exception) { Locale.getDefault().toLanguageTag() }
+    val langPrefix = savedLangTag.split("-").firstOrNull()?.lowercase(Locale.ROOT) ?: Locale.getDefault().language
+    val offlineMessage = when (langPrefix) {
+        "zh", "zh-cn", "zh-hk", "zh-tw" -> "無網路，無法載入即將上映的電影"
+        "ko" -> "인터넷에 연결되어 있지 않습니다. 상영 예정 영화를 불러올 수 없습니다."
+        "ja" -> "インターネットに接続されていません。今後公開予定の映画を読み込めません。"
+        else -> "No internet, unable to load upcoming movies"
+    }
 
     // Reset the offline toast flag when we come back online so future outages will show the toast
     LaunchedEffect(isOnline) {
@@ -55,7 +67,7 @@ fun UpcomingMoviesScreen(
         if (!isOnline) {
             LaunchedEffect(isOnline) {
                 if (!offlineToastShownState.value) {
-                    android.widget.Toast.makeText(context, "No internet, unable to load upcoming movies", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(context, offlineMessage, android.widget.Toast.LENGTH_LONG).show()
                     offlineToastShownState.value = true
                 }
             }
@@ -63,7 +75,7 @@ fun UpcomingMoviesScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                androidx.compose.material3.Text(text = "No internet, unable to load upcoming movies")
+                androidx.compose.material3.Text(text = offlineMessage)
             }
             return
         }

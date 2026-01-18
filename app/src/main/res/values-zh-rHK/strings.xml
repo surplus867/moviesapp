@@ -11,4 +11,5 @@
     <string name="asian">亞洲</string>
     <string name="asian_movie">亞洲電影</string>
     <string name="asian_drama">亞洲劇集</string>
+    <string name="error_loading_asian_dramas">錯誤：載入亞洲劇集失敗</string>
 </resources>

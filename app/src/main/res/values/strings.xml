@@ -12,4 +12,6 @@
     <string name="asian_drama" translatable="false">Asian Drama</string>
     <string name="selected_language" translatable="false">Selected Language</string>
     <string name="asian" translatable="false">Asian</string>
+    <!-- Error messages -->
+    <string name="error_loading_asian_dramas">Error loading Asian dramas</string>
 </resources>
