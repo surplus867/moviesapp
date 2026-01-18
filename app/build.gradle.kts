@@ -5,6 +5,7 @@ plugins {
     id("dagger.hilt.android.plugin")
     id("com.google.devtools.ksp")
     id("kotlin-parcelize")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
@@ -15,7 +16,7 @@ android {
         applicationId = "com.minyu.moviesapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 9
+        versionCode = 10
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -43,14 +44,17 @@ android {
     buildFeatures {
         compose = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.0"
-    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+// Force a compatible kotlinx-metadata-jvm version to avoid runtime metadata/version mismatches
+// (Some Hilt / Kotlin compiler combos may generate Metadata version that requires a newer kotlinx-metadata-jvm.)
+configurations.all {
+    resolutionStrategy.force("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.6.2")
 }
 
 dependencies {
@@ -73,6 +77,9 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
+    // Explicitly add kotlinx-metadata-jvm to ensure the runtime artifact matches the Kotlin metadata.
+    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.6.2")
+
     // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
@@ -94,14 +101,14 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.4.0")
 
     // Room
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
-    implementation("androidx.room:room-paging:2.6.1")
+    implementation("androidx.room:room-ktx:2.7.0-alpha12")
+    ksp("androidx.room:room-compiler:2.7.0-alpha12")
+    implementation("androidx.room:room-paging:2.7.0-alpha12")
 
-    // Dagger - Hilt
-    implementation("com.google.dagger:hilt-android:2.49")
-    ksp("com.google.dagger:hilt-compiler:2.48.1")
-    ksp("androidx.hilt:hilt-compiler:1.2.0")
+    // Hilt (using kapt - Hilt KSP not fully supported yet)
+    implementation("com.google.dagger:hilt-android:2.58")
+    kapt("com.google.dagger:hilt-compiler:2.58")
+    kapt("androidx.hilt:hilt-compiler:1.3.0")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // Extended Icons

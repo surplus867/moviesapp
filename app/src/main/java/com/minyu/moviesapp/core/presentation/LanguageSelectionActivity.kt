@@ -1,4 +1,3 @@
-
 package com.minyu.moviesapp.core.presentation
 
 import android.content.Intent
@@ -8,7 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -110,17 +108,13 @@ fun LanguageSelectionScreen(onLanguageSelected: (String) -> Unit) {
 
         // Render each language as a full-width Text that is clickable.
         languages.forEach { (code, name) ->
-            // Remembered interaction source for click semantics (no ripple).
-            val interactionSource = remember { MutableInteractionSource() }
             Text(
                 text = name,
                 modifier = Modifier
                     .fillMaxWidth()
-                    // Workaround: explicitly set 'indication = null' to avoid ripple crash
-                    // caused by mixed Compose versions. Remove when dependencies are aligned.
                     .clickable(
-                        interactionSource = interactionSource,
-                        indication = null
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = LocalIndication.current
                     ) { onLanguageSelected(code) }
                     .padding(8.dp)
             )
