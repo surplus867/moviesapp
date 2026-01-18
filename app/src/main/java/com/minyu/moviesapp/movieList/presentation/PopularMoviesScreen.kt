@@ -10,14 +10,21 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.minyu.moviesapp.core.util.ConnectivityObserver
 import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import com.minyu.moviesapp.movieList.presentation.components.MovieItem
 import com.minyu.moviesapp.movieList.util.Category
@@ -33,10 +40,45 @@ fun PopularMoviesScreen(
     favoriteMoviesViewModel: FavoriteMoviesViewModel // For favorite movies
 ) {
     val gridState = rememberLazyGridState() // Tracks grid scroll state
-    val scope = rememberCoroutineScope() // For launching coroutines (not used here)
 
-    // If no movies, show loading spinner
+    // Connectivity observer (show toast + message when offline)
+    val context = LocalContext.current
+    val connectivityObserver = remember { ConnectivityObserver(context) }
+    val isOnline by connectivityObserver.isOnline.collectAsState(initial = true)
+    val offlineToastShownState = remember { mutableStateOf(false) }
+
+    // Reset the offline toast flag when we come back online so future outages will show the toast
+    LaunchedEffect(isOnline) {
+        if (isOnline) {
+            offlineToastShownState.value = false
+        }
+    }
+
+    // Ensure we unregister network callback when this composable leaves
+    DisposableEffect(Unit) {
+        onDispose {
+            connectivityObserver.stop()
+        }
+    }
+
+    // If no movies, show loading spinner or offline message
     if (movieListState.popularMovieList.isEmpty()) {
+        if (!isOnline) {
+            LaunchedEffect(isOnline) {
+                if (!offlineToastShownState.value) {
+                    android.widget.Toast.makeText(context, "No internet, unable to load movies", android.widget.Toast.LENGTH_LONG).show()
+                    offlineToastShownState.value = true
+                }
+            }
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "No internet, unable to load movies")
+            }
+            return
+        }
+
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -77,7 +119,7 @@ fun PopularMoviesScreen(
         ) { index ->
             val movie = movieListState.popularMovieList[index]
             MovieItem(
-                movie = movieListState.popularMovieList[index],
+                movie = movie,
                 navHostController = navController,
                 favoriteMoviesViewModel = favoriteMoviesViewModel
             )

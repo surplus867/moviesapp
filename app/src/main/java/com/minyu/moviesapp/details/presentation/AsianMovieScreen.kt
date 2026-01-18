@@ -19,12 +19,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.compose.ui.platform.LocalContext
 import com.minyu.moviesapp.movieList.presentation.components.MovieItem
+import com.minyu.moviesapp.core.util.ConnectivityObserver
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -38,12 +45,63 @@ fun AsianMovieScreen(
     // Observe the state from the ViewModel
     val state = viewModel.state.collectAsState()
 
+    // Connectivity observer: show a one-time toast + message when offline instead of a stuck spinner
+    val context = LocalContext.current
+    val connectivityObserver = remember { ConnectivityObserver(context) }
+    val isOnline by connectivityObserver.isOnline.collectAsState(initial = true)
+    val offlineToastShownState = remember { mutableStateOf(false) }
+
+    // Single LaunchedEffect: reset flag when online; show the toast when offline and either loading or we don't have movies
+    LaunchedEffect(isOnline, state.value.isLoading, state.value.movies.size) {
+        android.util.Log.d(
+            "AsianMovieScreen",
+            "LaunchedEffect run: isOnline=$isOnline isLoading=${state.value.isLoading} movies=${state.value.movies.size} offlineShown=${offlineToastShownState.value}"
+        )
+        if (isOnline) {
+            offlineToastShownState.value = false
+            return@LaunchedEffect
+        }
+
+        // We want to notify only if we are loading or have no movies to display
+        val shouldNotify = state.value.isLoading || state.value.movies.isEmpty()
+        android.util.Log.d("AsianMovieScreen", "shouldNotify=$shouldNotify")
+        if (shouldNotify && !offlineToastShownState.value) {
+            android.util.Log.d("AsianMovieScreen", "showing offline toast")
+            android.widget.Toast.makeText(context, "Unable to load asian movies, no internet connection", android.widget.Toast.LENGTH_LONG).show()
+            offlineToastShownState.value = true
+        }
+    }
+
+    // If offline and we have no movies, show the message immediately (covers case when not 'isLoading')
+    if (!isOnline && state.value.movies.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = "Unable to load asian movies, no internet connection",
+                color = Color.Black
+            )
+        }
+        return
+    }
+
+    // Unregister network callback when this composable leaves
+    DisposableEffect(Unit) {
+        onDispose { connectivityObserver.stop() }
+    }
+
     // Main container for the screen
     Box(modifier = Modifier.fillMaxSize()) {
         // Show loading indicator if movies are being loaded
         when {
             state.value.isLoading -> {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                if (!isOnline) {
+                    Text(
+                        text = "Unable to load asian movies, no internet connection",
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Color.Black
+                    )
+                } else {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
             }
             // Show error message if there is an error
             state.value.error != null -> {

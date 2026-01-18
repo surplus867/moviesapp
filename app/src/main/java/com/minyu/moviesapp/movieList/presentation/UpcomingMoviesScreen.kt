@@ -16,6 +16,14 @@ import androidx.navigation.NavHostController
 import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import com.minyu.moviesapp.movieList.presentation.components.MovieItem
 import com.minyu.moviesapp.movieList.util.Category
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
+import com.minyu.moviesapp.core.util.ConnectivityObserver
 
 
 @Composable
@@ -25,9 +33,42 @@ fun UpcomingMoviesScreen(
     onEvent:(MovieListUiEvent) -> Unit, // Callback to handle UI events triggered in this composable
     favoriteMoviesViewModel: FavoriteMoviesViewModel
 ) {
+    // Connectivity observer (show toast + message when offline)
+    val context = LocalContext.current
+    val connectivityObserver = remember { ConnectivityObserver(context) }
+    val isOnline by connectivityObserver.isOnline.collectAsState(initial = true)
+    val offlineToastShownState = remember { mutableStateOf(false) }
+
+    // Reset the offline toast flag when we come back online so future outages will show the toast
+    LaunchedEffect(isOnline) {
+        if (isOnline) offlineToastShownState.value = false
+    }
+
+    // Ensure we unregister the network callback when this composable leaves
+    DisposableEffect(Unit) {
+        onDispose { connectivityObserver.stop() }
+    }
+
     // Check if the upcoming movie list is empty
     if (movieListState.upcomingMovieList.isEmpty()) {
-        // Display a loading indicator if the list is empty
+        // If offline, show a one-time toast and a user-friendly message instead of the spinner
+        if (!isOnline) {
+            LaunchedEffect(isOnline) {
+                if (!offlineToastShownState.value) {
+                    android.widget.Toast.makeText(context, "No internet, unable to load upcoming movies", android.widget.Toast.LENGTH_LONG).show()
+                    offlineToastShownState.value = true
+                }
+            }
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.Text(text = "No internet, unable to load upcoming movies")
+            }
+            return
+        }
+
+        // Display a loading indicator if the list is empty and we are online
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center

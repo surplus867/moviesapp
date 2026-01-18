@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -66,7 +67,7 @@ fun AsianDramaScreen(
                 }
                 // Show error message if there is an error
                 uiState.error != null -> {
-                    Text("Error: ${uiState.error}", color = MaterialTheme.colorScheme.error)
+                    Text("Error: ${uiState.error}", color = Color.Black)
                 }
                 // Show the list of dramas if data is loaded
                 else -> {

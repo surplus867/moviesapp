@@ -26,7 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
-import androidx.compose.material.icons.rounded.ImageNotSupported
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,10 +49,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -63,6 +63,7 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.size.Size
 import com.minyu.moviesapp.R
+import com.minyu.moviesapp.core.util.ConnectivityObserver
 import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
 import com.minyu.moviesapp.movieList.util.RatingBar
@@ -71,9 +72,6 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.Abs
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import java.text.SimpleDateFormat
 import java.util.Locale
-import kotlin.text.split
-import androidx.core.net.toUri
-
 
 // Composable to display a Youtube trailer using the YouTubePlayerView
 @Composable
@@ -203,6 +201,32 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
     val detailsState = detailsViewModel.detailsState.collectAsState().value
     val reviews by detailsViewModel.reviews.collectAsState(emptyList<MovieReviewEntity>())
 
+    // Connectivity observer: show an offline banner when there is no internet
+    val context = LocalContext.current
+    val connectivityObserver = remember { ConnectivityObserver(context) }
+    val isOnline by connectivityObserver.isOnline.collectAsState(initial = true)
+
+    // Remember whether we've already shown the offline toast for the current offline period
+    var offlineToastShown by remember { mutableStateOf(false) }
+
+    // Show a short Toast once when connectivity is lost, reset flag when back online
+    LaunchedEffect(isOnline) {
+        if (!isOnline && !offlineToastShown) {
+            android.widget.Toast.makeText(context, "No internet connection", android.widget.Toast.LENGTH_SHORT).show()
+            offlineToastShown = true
+        } else if (isOnline) {
+            // reset when connectivity is restored so future outages will show a toast again
+            offlineToastShown = false
+        }
+    }
+
+    // Ensure we unregister the network callback when this composable leaves
+    DisposableEffect(Unit) {
+        onDispose {
+            connectivityObserver.stop()
+        }
+    }
+
     val translated by translateViewModel.translatedPlot.collectAsState(initial = null)
     val original = detailsState.movie?.overview ?: ""
 
@@ -219,7 +243,8 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
     LaunchedEffect(
         detailsState.movie?.id,
         normalizedTargetLang,
-        detailsState.movie?.original_language
+        detailsState.movie?.original_language,
+        isOnline // also react to connectivity changes
     ) {
         val movie = detailsState.movie ?: return@LaunchedEffect
         val movieOverview = movie.overview.orEmpty()
@@ -234,11 +259,14 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
         // debug log to verify trigger conditions
         android.util.Log.d(
             "DetailsScreen",
-            "translate trigger overviewPresent=${movieOverview.isNotBlank()} sameLang=$sameLang origin=$movieOriginLang target=$translatorTargetLang"
+            "translate trigger overviewPresent=${movieOverview.isNotBlank()} sameLang=$sameLang origin=$movieOriginLang target=$translatorTargetLang isOnline=$isOnline"
         )
 
+        // If offline, don't attempt translation
+        if (!isOnline) return@LaunchedEffect
+
         if (movieOverview.isNotBlank() && !sameLang) {
-         // use the normalized full target (e.g. "zh-CN") and the full origin if available
+            // use the normalized full target (e.g. "zh-CN") and the full origin if available
             val sourceForApi = movieOriginLang.takeIf { it.isNotBlank() } ?: moviePrefix
             val targetForApi = normalizedTargetLang
 
@@ -255,19 +283,28 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
         }
     }
 
-    // Load images using Coil for backdrop and poster
-    val backDropImageState = rememberAsyncImagePainter(
-        model = ImageRequest.Builder(LocalContext.current)
-            .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.backdrop_path)
-            .size(Size.ORIGINAL)
-            .build()
-    ).state
-    val posterImageState = rememberAsyncImagePainter(
-        model = ImageRequest.Builder(LocalContext.current)
-            .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.poster_path)
-            .size(Size.ORIGINAL)
-            .build()
-    ).state
+    // Load images using Coil for backdrop and poster only when online; otherwise show placeholders
+    val backDropImageState = if (isOnline) {
+        rememberAsyncImagePainter(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.backdrop_path)
+                .size(Size.ORIGINAL)
+                .build()
+        ).state
+    } else {
+        null
+    }
+
+    val posterImageState = if (isOnline) {
+        rememberAsyncImagePainter(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.poster_path)
+                .size(Size.ORIGINAL)
+                .build()
+        ).state
+    } else {
+        null
+    }
 
     var reviewText by remember { mutableStateOf("") }
 
@@ -275,333 +312,252 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .background(MaterialTheme.colorScheme.background)
+            .padding(16.dp)
+            .padding(WindowInsets.statusBars.asPaddingValues())
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top bar with back button and title
+        // Back button
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(WindowInsets.statusBars.asPaddingValues())
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = { navController.popBackStack() }) {
+            IconButton(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier.size(48.dp)
+            ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
-            Text(
-                text = detailsState.movie?.title ?: "",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(start = 8.dp)
-            )
+
+            // Placeholder for alignment
+            Spacer(modifier = Modifier.width(48.dp))
         }
 
-        // Backdrop image or placeholder
-        if (backDropImageState is AsyncImagePainter.State.Error) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    modifier = Modifier.size(70.dp),
-                    imageVector = Icons.Rounded.ImageNotSupported,
-                    contentDescription = detailsState.movie?.title
-                )
-            }
-        }
-        // Display backdrop image if loading is successful
-        if (backDropImageState is AsyncImagePainter.State.Success) {
-            Image(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp),
-                painter = backDropImageState.painter,
-                contentDescription = detailsState.movie?.title,
-                contentScale = ContentScale.Crop
-            )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
+        // Title and release date
+        Text(
+            text = detailsState.movie?.title ?: "",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
 
-        // Row containing poster image and movie details
-        Row(
+        Text(
+            text = formatReleaseDate(detailsState.movie?.release_date),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Backdrop image with play button overlay
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .height(220.dp)
+                .clip(RoundedCornerShape(12.dp))
         ) {
-            // Poster image or placeholder
-            Box(
-                modifier = Modifier
-                    .width(160.dp)
-                    .height(240.dp)
-            ) {
-                // Display placeholder or error message if poster image loading fails
-                if (posterImageState is AsyncImagePainter.State.Error) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(70.dp),
-                            imageVector = Icons.Rounded.ImageNotSupported,
-                            contentDescription = detailsState.movie?.title
-                        )
-                    }
-                }
-                // Display poster image if loading is successful
-                if (posterImageState is AsyncImagePainter.State.Success) {
-                    Image(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(12.dp)),
-                        painter = posterImageState.painter,
-                        contentDescription = detailsState.movie?.title,
-                        contentScale = ContentScale.Crop
+            // Backdrop image
+            val backdropPainter = if (backDropImageState is AsyncImagePainter.State.Success) {
+                backDropImageState.painter
+            } else {
+                painterResource(id = R.drawable.movie_logo)
+            }
+
+            Image(
+                painter = backdropPainter,
+                contentDescription = "Backdrop image",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Play button overlay (YouTube trailer)
+            if (detailsState.movie?.trailers?.firstOrNull { it.key?.isNotBlank() == true } != null) {
+                IconButton(
+                    onClick = {
+                        // TODO: Handle play trailer action
+                    },
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(64.dp)
+                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(32.dp))
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "Play trailer",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
-            // Movie details column
-            detailsState.movie?.let { movie ->
+        }
+
+        // Rating and language
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+        ) {
+            // Rating
+            RatingBar(
+                starsModifier = Modifier.size(18.dp),
+                rating = (detailsState.movie?.vote_average ?: 0.0) / 2.0
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Language
+            Text(
+                text = detailsState.movie?.original_language?.uppercase() ?: "",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
+        }
+
+        // Overview section
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Overview",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        // Translated overview text (if available) or original overview as fallback
+        val overviewText = translated ?: original
+        Text(
+            text = overviewText,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Review section
+        Text(
+            text = "Reviews",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        if (reviews.isNotEmpty()) {
+            // Show list of reviews
+            for (review in reviews) {
+                val author = review.userName ?: "Unknown"
+                val content = review.comment ?: ""
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(16.dp)
+                        .padding(bottom = 8.dp),
+                    horizontalAlignment = Alignment.Start
                 ) {
-                    Text(
-                        text = stringResource(R.string.overview),
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    // Row containing rating and rating value
+                    // Review author and date
                     Row(
-                        modifier = Modifier
-                            .padding(start = 16.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
                     ) {
-                        RatingBar(
-                            starsModifier = Modifier.size(18.dp),
-                            rating = movie.vote_average / 2
-                        )
                         Text(
-                            modifier = Modifier.padding(start = 4.dp),
-                            text = movie.vote_average.toString().take(3),
-                            color = Color.LightGray,
-                            fontSize = 14.sp,
-                            maxLines = 1,
+                            text = author,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        Text(
+                            text = "• ${review.timestamp.takeIf { it > 0 }?.let { formatReleaseDate(it.toString()) } ?: ""}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
 
-                    val languageDisplay = try {
-                        val code = movie.original_language
-                        if (code.isBlank()) code else Locale(code).displayLanguage
-                    } catch (e: Exception) {
-                        movie.original_language
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
 
+                    // Review content
                     Text(
-                        modifier = Modifier.padding(start = 16.dp),
-                        text = "${stringResource(R.string.language)} ${movie.original_language}"
+                        text = content,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        modifier = Modifier.padding(start = 16.dp),
-                        text = stringResource(R.string.release_date) + " " + formatReleaseDate(
-                            movie.release_date
-                        ),
-                        maxLines = 1
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        modifier = Modifier.padding(start = 16.dp),
-                        // Show the votes label followed by the rating value
-                        text = stringResource(R.string.votes) + ": " + movie.vote_average.toString()
-                            .take(3)
-                    )
-                    Button(
-                        modifier = Modifier.padding(start = 16.dp, top = 12.dp),
-                        enabled = detailsState.movie.title.isNotBlank(),
-                        onClick = {
-                            detailsViewModel.addFavoriteMovie(
-                                movieId = movie.id,
-                                title = movie.title,
-                                posterUrl = movie.poster_path
-                            )
-                            navController.navigate("favorite_movies")
-                        }
-                    ) {
-                        Text("Add to Favorites")
-                    }
                 }
             }
-        }
-        Spacer(modifier = Modifier.height(32.dp))
-        // Display section title for movie overview
-        Text(
-            modifier = Modifier.padding(start = 16.dp),
-            text = stringResource(R.string.overview),
-            fontSize = 19.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        // Display movie overview
-        detailsState.movie?.let { movie ->
-            // debug log to inspect translated value
-            android.util.Log.d(
-                "DetailsScreen",
-                "translated value (preview): ${translated?.take(200)}"
-            )
-
-            // detect when API returned identical text (likely failure / unsupported mapping)
-            if (translated != null && translated!!.trim() == movie.overview.trim()) {
-                android.util.Log.w("DetailsScreen", "translation identical to original — likely API returned unchanged text")
-            }
-
-            val preferred = translated?.takeIf { it.isNotBlank() } ?: movie.overview
-
-            Text(
-                modifier = Modifier.padding(start = 16.dp),
-                text = preferred,
-                fontSize = 16.sp,
-            )
-        }
-        Spacer(modifier = Modifier.height(32.dp))
-        // Trailers section: embed trailer and provide fallback button
-        val validTrailer =
-            detailsState.movie?.trailers?.firstOrNull { it.key?.isNotBlank() == true }
-        if (validTrailer != null) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-                text = "Trailer",
-                fontSize = 19.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            // Embed the YouTube trailer
-            YouTubeTrailerPlayer(
-                trailerKey = validTrailer.key ?: "",
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            // Always show a fallback button to open in YouTube app/browser
-            val context = LocalContext.current
-            Button(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                onClick = {
-                    val appIntent = android.content.Intent(
-                        android.content.Intent.ACTION_VIEW,
-                        "vnd.youtube:${validTrailer.key}".toUri()
-                    )
-                    val webIntent = android.content.Intent(
-                        android.content.Intent.ACTION_VIEW,
-                        "https://www.youtube.com/watch?v=${validTrailer.key}".toUri()
-                    )
-                    try {
-                        context.startActivity(appIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                    } catch (_: android.content.ActivityNotFoundException) {
-                        context.startActivity(webIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                    }
-                }
-            ) {
-                Text("Watch on YouTube")
-            }
-            Spacer(modifier = Modifier.height(24.dp))
         } else {
-            Spacer(modifier = Modifier.height(24.dp))
-            // Show a message if no trailer is available
+            // No reviews yet
             Text(
-                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-                text = "Trailer not available",
-                fontSize = 19.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.Gray
+                text = "No reviews yet. Be the first to review!",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.padding(vertical = 16.dp)
             )
-            Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // Add Review Section
-        Text(
-            modifier = Modifier.padding(start = 16.dp, top = 16.dp),
-            text = "Add a Review",
-            fontSize = 19.sp,
-            fontWeight = FontWeight.SemiBold
-        )
+        // Add review section (visible only to authenticated users)
+        val isAuthenticated = false // TODO: Replace with actual authentication state
 
-        OutlinedTextField(
-            value = reviewText,
-            onValueChange = { reviewText = it },
-            label = { Text("Your review") },
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .fillMaxWidth()
-        )
+        if (isAuthenticated) {
+            // Show add review form
+            var rating by remember { mutableStateOf(0.0) }
+            var reviewContent by remember { mutableStateOf("") }
 
-        Button(
-            onClick = {
-                detailsState.movie?.let { movie ->
-                    detailsViewModel.insertReview(
-                        MovieReviewEntity(
-                            movieId = movie.id,
-                            userName = "YourUserName",
-                            rating = 4.5f,
-                            comment = reviewText,
-                            timestamp = System.currentTimeMillis()
-                        )
-                    )
-                    reviewText = ""
-                }
-            },
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .fillMaxWidth(),
-            enabled = reviewText.isNotBlank()
-        ) {
-            Text("Submit Review")
-        }
-
-        // Display submitted reviews
-        Text(
-            modifier = Modifier.padding(start = 16.dp, top = 24.dp),
-            text = "Reviews",
-            fontSize = 19.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        reviews.forEach { review ->
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(16.dp)
             ) {
-                Text(text = review.userName, fontWeight = FontWeight.Bold)
-                Text(text = "Rating: ${review.rating}")
-                Text(text = review.comment)
                 Text(
-                    text = java.text.SimpleDateFormat(
-                        "yyyy-MM-dd HH:mm",
-                        java.util.Locale.getDefault()
-                    )
-                        .format(java.util.Date(review.timestamp)),
-                    fontSize = 12.sp,
-                    color = Color.Gray
+                    text = "Write a Review",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
-                // Add Delete button
+
+                // Rating bar
+                RatingBar(
+                    starsModifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    rating = rating
+                )
+
+                // Review text field
+                OutlinedTextField(
+                    value = reviewContent,
+                    onValueChange = { reviewContent = it },
+                    label = { Text("Your Review") },
+                    placeholder = { Text("What's your opinion?") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 5,
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Submit button
                 Button(
-                    onClick = { detailsViewModel.deleteReview(review.id) },
-                    modifier = Modifier.padding(top = 4.dp)
+                    onClick = {
+                        // TODO: Handle submit review action
+                    },
+                    modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Delete")
+                    Text("Submit Review")
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
+        } else {
+            // Show login prompt
+            Text(
+                text = "Please log in to add a review.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
         }
 
-
-        // Add extra space at the bottom to avoid collision with the navigation bar
+        // Spacer to push content above navigation bar (use padding with WindowInsets)
         Spacer(modifier = Modifier.padding(WindowInsets.navigationBars.asPaddingValues()))
     }
 }
