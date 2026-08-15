@@ -27,6 +27,7 @@ interface MovieApi {
         @Query("api_key") apikey: String = API_KEY
     ): TrailerListDto
 
+    // TMDB watch provider endpoint (powered by JustWatch data per region code).
     @GET("movie/{movie_id}/watch/providers")
     suspend fun getWatchProviders(
         @Path("movie_id") movieId: Int,

@@ -348,6 +348,7 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
+        // Show streaming options only when provider metadata exists for a region.
         detailsState.watchProviderInfo?.let { watchProviderInfo ->
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -571,7 +572,7 @@ private fun resolveYouTubeId(keyOrUrl: String): String {
         val uri = keyOrUrl.toUri()
         val v = uri.getQueryParameter("v")
         if (!v.isNullOrBlank()) return v
-        // handle youtu.be short urls and /embed/ segments
+        // handle youtube short urls and /embed/ segments
         val path = uri.path ?: ""
         val last = path.split('/').lastOrNull().orEmpty()
         last.ifBlank { keyOrUrl }
@@ -581,6 +582,7 @@ private fun resolveYouTubeId(keyOrUrl: String): String {
 }
 
 private fun selectPreferredTrailerKey(trailers: List<TrailerDto>?): String {
+    // Prioritize official YouTube trailers, then relax constraints as fallback.
     return trailers
         ?.firstOrNull {
             it.site.equals("YouTube", ignoreCase = true) &&
@@ -627,6 +629,7 @@ private fun openTrailerInYouTube(context: Context, trailerKey: String): Boolean 
 
 private fun openWatchProviderLink(context: Context, watchProviderInfo: WatchProviderInfo): Boolean {
     if (watchProviderInfo.link.isBlank()) return false
+    // TMDB returns a provider landing page URL for the selected region.
     val intent = Intent(Intent.ACTION_VIEW, watchProviderInfo.link.toUri())
     return try {
         context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

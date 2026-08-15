@@ -127,7 +127,7 @@ fun AsianMovieScreen(
             else -> {
                 // Get distinct countries from the movie list
                 val countries = state.value.movies.map { it.country }.distinct()
-                // Derive the available release years so future movies appear automatically.
+                // Derive years from API data so new years (e.g., 2026+) appear without code changes.
                 val years = state.value.movies
                     .mapNotNull { movie ->
                         movie.release_date

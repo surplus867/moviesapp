@@ -26,6 +26,7 @@ class MovieListRepositoryImpl @Inject constructor(
     private val movieDatabase: MovieDatabase
 ) : MovieListRepository {
 
+    // Short TTL prevents stale local cache from hiding newly released titles.
     private val movieCacheTtlMillis = TimeUnit.HOURS.toMillis(6)
 
     // Fetch a list of movies from either the local database or the remote API
@@ -271,10 +272,12 @@ class MovieListRepositoryImpl @Inject constructor(
         return try {
             val response = movieApi.getWatchProviders(movieId)
             val upperRegion = region.uppercase()
+            // Prefer the user's region; fall back to US where coverage is usually present.
             val countryProviders = response.results?.get(upperRegion)
                 ?: response.results?.get("US")
                 ?: return null
 
+            // Flatten streaming/rent/buy into one display list for a simple UI section.
             val providerNames = buildList {
                 countryProviders.flatrate?.forEach { provider ->
                     provider.provider_name?.takeIf { it.isNotBlank() }?.let { add(it) }

@@ -62,8 +62,9 @@ class DetailsViewModel @Inject constructor(
                     }
                     is Resource.Success -> {
                         result.data?.let { movie ->
-                            // Fetch trailers from TMDB
+                            // Fetch trailers + watch providers in one pass so details has full watch actions.
                             val trailers = movieListRepository.getMovieTrailers(id)
+                            // Locale country code is used as the TMDB watch-provider region key.
                             val region = Locale.getDefault().country.takeIf { it.isNotBlank() } ?: "US"
                             val watchProviderInfo = movieListRepository.getWatchProviders(id, region)
                             // Update state with movie and trailers
