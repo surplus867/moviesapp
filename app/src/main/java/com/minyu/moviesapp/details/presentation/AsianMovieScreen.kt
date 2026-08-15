@@ -127,8 +127,16 @@ fun AsianMovieScreen(
             else -> {
                 // Get distinct countries from the movie list
                 val countries = state.value.movies.map { it.country }.distinct()
-                // List of years to group movies by
-                val years = listOf("2023", "2024", "2025")
+                // Derive the available release years so future movies appear automatically.
+                val years = state.value.movies
+                    .mapNotNull { movie ->
+                        movie.release_date
+                            .takeIf { it.length >= 4 }
+                            ?.take(4)
+                            ?.takeIf { year -> year.all(Char::isDigit) }
+                    }
+                    .distinct()
+                    .sortedDescending()
                 // Group movies by country and year
                 val moviesByCountryAndYear = countries.associateWith { country ->
                     years.associateWith { year ->

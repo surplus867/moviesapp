@@ -6,6 +6,7 @@ package com.minyu.moviesapp.movieList.data.remote
 
 import com.minyu.moviesapp.movieList.data.remote.respond.MovieListDto
 import com.minyu.moviesapp.movieList.data.remote.respond.TrailerListDto
+import com.minyu.moviesapp.movieList.data.remote.respond.WatchProvidersResponseDto
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -25,6 +26,12 @@ interface MovieApi {
         @Path("movie_id") movieId: Int,
         @Query("api_key") apikey: String = API_KEY
     ): TrailerListDto
+
+    @GET("movie/{movie_id}/watch/providers")
+    suspend fun getWatchProviders(
+        @Path("movie_id") movieId: Int,
+        @Query("api_key") apikey: String = API_KEY
+    ): WatchProvidersResponseDto
                            
     // Fetches movies by original language (e.g., Korean, Chinese, Japanese)
     @GET("discover/movie")

@@ -3,6 +3,7 @@ package com.minyu.moviesapp.movieList.domain.repository
 import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
 import com.minyu.moviesapp.movieList.data.remote.respond.TrailerDto
 import com.minyu.moviesapp.movieList.domain.model.Movie
+import com.minyu.moviesapp.movieList.domain.model.WatchProviderInfo
 import com.minyu.moviesapp.movieList.util.Resource
 import kotlinx.coroutines.flow.Flow
 
@@ -27,6 +28,8 @@ interface MovieListRepository {
     suspend fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String)
 
     suspend fun getMovieTrailers(movieId: Int): List<TrailerDto>
+
+    suspend fun getWatchProviders(movieId: Int, region: String): WatchProviderInfo?
 
     suspend fun insertReview(review: MovieReviewEntity)
 

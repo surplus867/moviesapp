@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -63,9 +64,15 @@ class DetailsViewModel @Inject constructor(
                         result.data?.let { movie ->
                             // Fetch trailers from TMDB
                             val trailers = movieListRepository.getMovieTrailers(id)
+                            val region = Locale.getDefault().country.takeIf { it.isNotBlank() } ?: "US"
+                            val watchProviderInfo = movieListRepository.getWatchProviders(id, region)
                             // Update state with movie and trailers
                             _detailsState.update {
-                                it.copy(movie = movie.copy(trailers = trailers), isLoading = false)
+                                it.copy(
+                                    movie = movie.copy(trailers = trailers),
+                                    watchProviderInfo = watchProviderInfo,
+                                    isLoading = false
+                                )
                             }
                         } ?: _detailsState.update { it.copy(isLoading = false) }
                     }

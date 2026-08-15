@@ -11,8 +11,10 @@ import com.minyu.moviesapp.movieList.data.mappers.toMovieEntity
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
 import com.minyu.moviesapp.movieList.data.remote.respond.TrailerDto
 import com.minyu.moviesapp.movieList.domain.model.Movie
+import com.minyu.moviesapp.movieList.domain.model.WatchProviderInfo
 import com.minyu.moviesapp.movieList.domain.repository.MovieListRepository
 import com.minyu.moviesapp.movieList.util.Resource
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import okio.IOException
@@ -23,6 +25,8 @@ class MovieListRepositoryImpl @Inject constructor(
     private val movieApi: MovieApi,
     private val movieDatabase: MovieDatabase
 ) : MovieListRepository {
+
+    private val movieCacheTtlMillis = TimeUnit.HOURS.toMillis(6)
 
     // Fetch a list of movies from either the local database or the remote API
     override suspend fun getMovieList(
@@ -38,7 +42,9 @@ class MovieListRepositoryImpl @Inject constructor(
             val localMovieList = movieDatabase.movieDao().getMovieListByCategory(category)
 
             // Check if local data should be used and emit the result
-            val shouldLoadLocalMovie = localMovieList.isNotEmpty() && !forceFetchFromRemote
+            val shouldLoadLocalMovie = localMovieList.isNotEmpty() &&
+                    !forceFetchFromRemote &&
+                    isCacheFresh(localMovieList.map { it.dateAdded })
             if (shouldLoadLocalMovie) {
                 emit(Resource.Success(data = localMovieList.map {
                     it.toMovie(
@@ -105,7 +111,10 @@ class MovieListRepositoryImpl @Inject constructor(
             movieDatabase.movieDao().getMovieListByCategoryAndCountry(category, country)
         }
 
-        if (localMovieList.isNotEmpty() && !forceFetchFromRemote) {
+        if (localMovieList.isNotEmpty() &&
+            !forceFetchFromRemote &&
+            isCacheFresh(localMovieList.map { it.dateAdded })
+        ) {
             emit(
                 Resource.Success(
                     localMovieList.map { it.toMovie(it.category, country = it.country) }
@@ -199,7 +208,10 @@ class MovieListRepositoryImpl @Inject constructor(
             movieDatabase.movieDao().getMovieListByCategoryAndCountry(category, country)
         }
 
-        if (localDramaList.isNotEmpty() && !forceFetchFromRemote) {
+        if (localDramaList.isNotEmpty() &&
+            !forceFetchFromRemote &&
+            isCacheFresh(localDramaList.map { it.dateAdded })
+        ) {
             emit(Resource.Success(localDramaList.map { it.toMovie(it.category, it.country) }))
             emit(Resource.Loading(false))
             return@flow
@@ -255,6 +267,43 @@ class MovieListRepositoryImpl @Inject constructor(
         return trailers
     }
 
+    override suspend fun getWatchProviders(movieId: Int, region: String): WatchProviderInfo? {
+        return try {
+            val response = movieApi.getWatchProviders(movieId)
+            val upperRegion = region.uppercase()
+            val countryProviders = response.results?.get(upperRegion)
+                ?: response.results?.get("US")
+                ?: return null
+
+            val providerNames = buildList {
+                countryProviders.flatrate?.forEach { provider ->
+                    provider.provider_name?.takeIf { it.isNotBlank() }?.let { add(it) }
+                }
+                countryProviders.rent?.forEach { provider ->
+                    provider.provider_name?.takeIf { it.isNotBlank() }?.let { add(it) }
+                }
+                countryProviders.buy?.forEach { provider ->
+                    provider.provider_name?.takeIf { it.isNotBlank() }?.let { add(it) }
+                }
+            }.distinct()
+
+            val link = countryProviders.link.orEmpty()
+            if (providerNames.isEmpty() && link.isBlank()) return null
+
+            WatchProviderInfo(
+                region = if (response.results?.containsKey(upperRegion) == true) upperRegion else "US",
+                link = link,
+                providers = providerNames
+            )
+        } catch (e: IOException) {
+            e.printStackTrace()
+            null
+        } catch (e: HttpException) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     override suspend fun insertReview(review: MovieReviewEntity) {
         movieDatabase.movieReviewDao().insertReview(review)
     }
@@ -266,5 +315,10 @@ class MovieListRepositoryImpl @Inject constructor(
     override suspend fun deleteReview(reviewId: Int) {
         movieDatabase.movieReviewDao().deleteReviewById(reviewId)
 
+    }
+
+    private fun isCacheFresh(dateAddedValues: List<Long>): Boolean {
+        val newestCachedAt = dateAddedValues.maxOrNull() ?: return false
+        return System.currentTimeMillis() - newestCachedAt < movieCacheTtlMillis
     }
 }

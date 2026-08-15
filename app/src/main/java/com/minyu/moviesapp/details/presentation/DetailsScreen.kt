@@ -61,6 +61,7 @@ import com.minyu.moviesapp.core.util.ConnectivityObserver
 import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
 import com.minyu.moviesapp.movieList.data.remote.respond.TrailerDto
+import com.minyu.moviesapp.movieList.domain.model.WatchProviderInfo
 import com.minyu.moviesapp.movieList.util.RatingBar
 import kotlinx.coroutines.launch
 import android.content.Intent
@@ -347,6 +348,47 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
+        detailsState.watchProviderInfo?.let { watchProviderInfo ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Where to Watch (${watchProviderInfo.region})",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            val providerSummary = if (watchProviderInfo.providers.isNotEmpty()) {
+                watchProviderInfo.providers.joinToString(", ")
+            } else {
+                "Available providers can be viewed via the link below."
+            }
+
+            Text(
+                text = providerSummary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            if (watchProviderInfo.link.isNotBlank()) {
+                Button(
+                    onClick = {
+                        val opened = openWatchProviderLink(context, watchProviderInfo)
+                        if (!opened) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "Unable to open watch provider link.",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    },
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    Text("Open streaming options")
+                }
+            }
+        }
+
         // Review section
         Text(
             text = "Reviews",
@@ -580,5 +622,16 @@ private fun openTrailerInYouTube(context: Context, trailerKey: String): Boolean 
         } catch (_: Exception) {
             false
         }
+    }
+}
+
+private fun openWatchProviderLink(context: Context, watchProviderInfo: WatchProviderInfo): Boolean {
+    if (watchProviderInfo.link.isBlank()) return false
+    val intent = Intent(Intent.ACTION_VIEW, watchProviderInfo.link.toUri())
+    return try {
+        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    } catch (_: Exception) {
+        false
     }
 }
