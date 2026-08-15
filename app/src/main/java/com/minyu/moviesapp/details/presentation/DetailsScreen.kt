@@ -1,8 +1,6 @@
 package com.minyu.moviesapp.details.presentation
 
-import android.app.Activity
-import android.content.pm.ActivityInfo
-import androidx.activity.ComponentActivity
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -24,8 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -39,11 +35,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,11 +48,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
@@ -70,198 +60,13 @@ import android.content.pm.ApplicationInfo
 import com.minyu.moviesapp.core.util.ConnectivityObserver
 import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
+import com.minyu.moviesapp.movieList.data.remote.respond.TrailerDto
 import com.minyu.moviesapp.movieList.util.RatingBar
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import kotlinx.coroutines.launch
 import android.content.Intent
-import android.net.Uri
 import java.text.SimpleDateFormat
 import java.util.Locale
 import androidx.core.net.toUri
-
-// Composable to display a Youtube trailer using the YouTubePlayerView
-@Composable
-fun YouTubeTrailerPlayer(trailerKey: String, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val activity = context as? Activity
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    // Persist playback position and fullscreen flag across recompositions/config changes
-    val currentSecond = rememberSaveable { mutableFloatStateOf(0f) }
-    val isFullScreen = rememberSaveable { mutableStateOf(false) }
-
-    // Hold references to player and view to control them from lifecycle callbacks and UI
-    val playerRef = remember {
-        mutableStateOf<com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer?>(
-            null
-        )
-    }
-    val playerViewRef = remember { mutableStateOf<YouTubePlayerView?>(null) }
-
-    // Track player error to show fallback UI
-    var playerError by remember { mutableStateOf<String?>(null) }
-
-    // Ensure we clean up the player view when this composable leaves
-    DisposableEffect(lifecycleOwner, trailerKey) {
-        onDispose {
-            try {
-                playerRef.value = null
-                playerViewRef.value?.let { view ->
-                    try { lifecycleOwner.lifecycle.removeObserver(view) } catch (_: Exception) {}
-                    try { view.release() } catch (_: Exception) {}
-                }
-                playerViewRef.value = null
-            } catch (_: Exception) {}
-        }
-    }
-
-    Box(modifier = modifier) {
-        // Use AndroidView to embed the YouTubePlayerView in Compose
-        AndroidView(
-            factory = { ctx ->
-                YouTubePlayerView(ctx).apply {
-                    // keep ref to the view so we can release it later
-                    playerViewRef.value = this
-                    // attach to lifecycle so the view can manage internal resources
-                    try {
-                        lifecycleOwner.lifecycle.addObserver(this)
-                    } catch (_: Exception) {}
-
-                    // Add a listener to handle YouTube player events
-                    addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
-                        // When the player is ready, keep a reference and load the video
-                        override fun onReady(youTubePlayer: com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer) {
-                            playerRef.value = youTubePlayer
-                            try {
-                                // debug
-                                android.util.Log.d("YouTubeTrailerPlayer", "onReady videoId=$trailerKey")
-                                // load the video from the provided key
-                                if (trailerKey.isNotBlank()) {
-                                    youTubePlayer.loadVideo(trailerKey, currentSecond.value)
-                                }
-                            } catch (_: Exception) {}
-                        }
-
-                        // If an error occurs, show a Toast message only
-                        override fun onError(
-                            youTubePlayer: com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer,
-                            error: PlayerConstants.PlayerError
-                        ) {
-                            // Log full error details for debugging (may include underlying code like 152-15)
-                            android.util.Log.e("YouTubeTrailerPlayer", "onError: $error")
-                            playerError = "Trailer not available (" + error.name + ")"
-                            android.widget.Toast.makeText(
-                                context,
-                                "Trailer cannot be played here. Please use the Watch on YouTube button.",
-                                android.widget.Toast.LENGTH_LONG
-                            ).show()
-
-                            // Try automatic fallback: open in YouTube app or web if possible
-                            try {
-                                val videoId = resolveYouTubeId(trailerKey)
-                                if (videoId.isNotBlank()) {
-                                    val appIntent = Intent(Intent.ACTION_VIEW,
-                                        "vnd.youtube:$videoId".toUri())
-                                    val webIntent = Intent(Intent.ACTION_VIEW, "https://www.youtube.com/watch?v=$videoId".toUri())
-                                    try {
-                                        context.startActivity(appIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                                    } catch (e: Exception) {
-                                        try { context.startActivity(webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
-                                    }
-                                }
-                            } catch (t: Throwable) {
-                                android.util.Log.w("YouTubeTrailerPlayer", "fallback launch failed", t)
-                            }
-                        }
-                    })
-                }
-            },
-            update = { view ->
-                // When trailer key changes, try to seek/load the new video
-                val player = playerRef.value
-                try {
-                    if (player != null) {
-                        if (currentSecond.value > 0f) player.seekTo(currentSecond.value)
-                        if (trailerKey.isNotBlank()) player.loadVideo(trailerKey, currentSecond.value)
-                    } else {
-                        // if player not ready, ensure the view will load it onReady (listener handles it)
-                    }
-                } catch (_: Exception) { /* ignore */ }
-            },
-            modifier = modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .clip(RoundedCornerShape(12.dp))
-        )
-
-        // Fullscreen toggle overlay button
-        IconButton(
-            onClick = {
-                isFullScreen.value = !isFullScreen.value
-                activity?.let { act ->
-                    val window = (act as ComponentActivity).window
-                    val controller = WindowCompat.getInsetsController(window, window.decorView)
-                    if (isFullScreen.value) {
-                        // enter fullscreen: hide system bars and switch to landscape
-                        controller.hide(WindowInsetsCompat.Type.systemBars())
-                        try {
-                            act.requestedOrientation =
-                                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                        } catch (_: Exception) { /* ignore */ }
-                    } else {
-                        // exit fullscreen: show system bars and restore orientation
-                        controller.show(WindowInsetsCompat.Type.systemBars())
-                        try {
-                            act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                        } catch (_: Exception) { /* ignore */ }
-                    }
-                }
-            },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(8.dp)
-        ) {
-            val icon =
-                if (isFullScreen.value) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen
-            Icon(
-                icon,
-                contentDescription = if (isFullScreen.value) " Exit fullscreen" else "Enter fullscreen"
-            )
-        }
-
-        // If the player reported an error, show a centered overlay with fallback
-        playerError?.let { errMsg ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = errMsg, color = Color.White)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = {
-                        // open in YouTube app or browser as fallback
-                        val videoId = resolveYouTubeId(trailerKey)
-                        val appIntent = Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId"))
-                        val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$videoId"))
-                        try {
-                            context.startActivity(appIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                        } catch (e: Exception) {
-                            try { context.startActivity(webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
-                        }
-                    }) {
-                        Text("Open on YouTube")
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { playerError = null }) { Text("Close") }
-                }
-            }
-        }
-    }
-}
 
 // Helper function to format release date nicely
 fun formatReleaseDate(dateString: String?): String {
@@ -446,68 +251,58 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                 .height(220.dp)
                 .clip(RoundedCornerShape(12.dp))
         ) {
-            // Determine available trailer key (first valid) and local UI state
-            val trailerKey = detailsState.movie?.trailers?.firstOrNull { it.key?.isNotBlank() == true }?.key.orEmpty()
-            var showPlayer by remember { mutableStateOf(false) }
+            val trailerKey = remember(detailsState.movie?.trailers) {
+                selectPreferredTrailerKey(detailsState.movie?.trailers)
+            }
+            val backdropPainter = if (backDropImageState is AsyncImagePainter.State.Success) {
+                backDropImageState.painter
+            } else {
+                painterResource(id = R.drawable.movie_logo)
+            }
 
-            if (showPlayer && trailerKey.isNotBlank()) {
-                // Show embedded YouTube player
-                YouTubeTrailerPlayer(
-                    trailerKey = trailerKey,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                )
+            Image(
+                painter = backdropPainter,
+                contentDescription = "Backdrop image",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
 
-                // Close button to exit player and return to backdrop
+            if (trailerKey.isNotBlank()) {
                 IconButton(
-                    onClick = { showPlayer = false },
+                    onClick = {
+                        android.util.Log.d("DetailsScreen", "Opening trailer in YouTube, trailerKey=$trailerKey")
+                        val opened = openTrailerInYouTube(context, trailerKey)
+                        if (!opened) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "Trailer link is unavailable right now.",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    },
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
+                        .align(Alignment.Center)
+                        .size(64.dp)
+                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(32.dp))
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.FullscreenExit,
-                        contentDescription = "Close player",
-                        tint = Color.White
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "Watch trailer on YouTube",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
                     )
                 }
-            } else {
-                // Backdrop image
-                val backdropPainter = if (backDropImageState is AsyncImagePainter.State.Success) {
-                    backDropImageState.painter
-                } else {
-                    painterResource(id = R.drawable.movie_logo)
-                }
 
-                Image(
-                    painter = backdropPainter,
-                    contentDescription = "Backdrop image",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                Text(
+                    text = "Watch trailer on YouTube",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp)
+                        .background(Color.Black.copy(alpha = 0.65f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 )
-
-                // Play button overlay (YouTube trailer)
-                if (trailerKey.isNotBlank()) {
-                    IconButton(
-                        onClick = {
-                            android.util.Log.d("DetailsScreen", "Play pressed, trailerKey=$trailerKey")
-                            showPlayer = true
-                        },
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(64.dp)
-                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(32.dp))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = "Play trailer",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
             }
         }
 
@@ -740,5 +535,50 @@ private fun resolveYouTubeId(keyOrUrl: String): String {
         last.ifBlank { keyOrUrl }
     } catch (_: Exception) {
         keyOrUrl
+    }
+}
+
+private fun selectPreferredTrailerKey(trailers: List<TrailerDto>?): String {
+    return trailers
+        ?.firstOrNull {
+            it.site.equals("YouTube", ignoreCase = true) &&
+                    it.type.equals("Trailer", ignoreCase = true) &&
+                    it.official == true &&
+                    !it.key.isNullOrBlank()
+        }
+        ?.key
+        ?: trailers
+            ?.firstOrNull {
+                it.site.equals("YouTube", ignoreCase = true) &&
+                        it.type.equals("Trailer", ignoreCase = true) &&
+                        !it.key.isNullOrBlank()
+            }
+            ?.key
+        ?: trailers
+            ?.firstOrNull {
+                it.site.equals("YouTube", ignoreCase = true) &&
+                        !it.key.isNullOrBlank()
+            }
+            ?.key
+        .orEmpty()
+}
+
+private fun openTrailerInYouTube(context: Context, trailerKey: String): Boolean {
+    val videoId = resolveYouTubeId(trailerKey)
+    if (videoId.isBlank()) return false
+
+    val appIntent = Intent(Intent.ACTION_VIEW, "vnd.youtube:$videoId".toUri())
+    val webIntent = Intent(Intent.ACTION_VIEW, "https://www.youtube.com/watch?v=$videoId".toUri())
+
+    return try {
+        context.startActivity(appIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    } catch (_: Exception) {
+        try {
+            context.startActivity(webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 }
