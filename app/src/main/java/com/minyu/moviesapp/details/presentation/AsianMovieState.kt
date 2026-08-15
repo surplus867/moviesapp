@@ -13,6 +13,7 @@ import com.minyu.moviesapp.movieList.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -46,12 +47,33 @@ class AsianMovieViewModel @Inject constructor(
         viewModelScope.launch {
             movieListRepository.getAsianMovieList(forceFetchFromRemote = false, page = 1)
                 .collect { resource ->
-                    if (resource is Resource.Success && resource.data != null) {
-                        // Filter movies by language or country
-                        val asianMovies = resource.data.filter {
-                            it.original_language in asianLanguages || it.country in asianCountries
+                    when (resource) {
+                        is Resource.Loading -> {
+                            // Keep previously rendered movies while toggling spinner state.
+                            _state.update { it.copy(isLoading = resource.isLoading) }
                         }
-                        _state.value = AsianMovieState(movies = asianMovies)
+                        is Resource.Error -> {
+                            _state.update {
+                                it.copy(
+                                    isLoading = false,
+                                    error = resource.message ?: "Error loading Asian movies"
+                                )
+                            }
+                        }
+                        is Resource.Success -> {
+                            val movies = resource.data ?: emptyList()
+                            // Filter movies by language or country
+                            val asianMovies = movies.filter {
+                                it.original_language in asianLanguages || it.country in asianCountries
+                            }
+                            _state.update {
+                                it.copy(
+                                    isLoading = false,
+                                    error = null,
+                                    movies = asianMovies
+                                )
+                            }
+                        }
                     }
                 }
         }

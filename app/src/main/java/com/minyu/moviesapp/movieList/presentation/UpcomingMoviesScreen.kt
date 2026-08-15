@@ -4,17 +4,25 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.minyu.moviesapp.R
+import com.minyu.moviesapp.core.presentation.EmptyStateView
+import com.minyu.moviesapp.core.presentation.ErrorStateView
+import com.minyu.moviesapp.core.presentation.LoadingStateView
 import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
+import com.minyu.moviesapp.movieList.presentation.components.DiscoveryControls
 import com.minyu.moviesapp.movieList.presentation.components.MovieItem
+import com.minyu.moviesapp.movieList.presentation.components.RecommendationsSection
 import com.minyu.moviesapp.movieList.util.Category
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -24,8 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
 import com.minyu.moviesapp.core.util.ConnectivityObserver
-import com.minyu.moviesapp.core.LanguagePrefs
-import java.util.Locale
 
 
 @Composable
@@ -35,21 +41,40 @@ fun UpcomingMoviesScreen(
     onEvent:(MovieListUiEvent) -> Unit, // Callback to handle UI events triggered in this composable
     favoriteMoviesViewModel: FavoriteMoviesViewModel
 ) {
+    val movieKey: (com.minyu.moviesapp.movieList.domain.model.Movie) -> String = { movie ->
+        val normalizedTitle = movie.title
+            .ifBlank { movie.original_title }
+            .trim()
+            .lowercase()
+            .replace(Regex("[^a-z0-9]+"), " ")
+            .trim()
+        val year = movie.release_date.take(4).takeIf { it.all(Char::isDigit) }.orEmpty()
+        "$normalizedTitle|$year"
+    }
+
+    // Reuse the same discovery behavior as popular tab for consistency.
+    val hasDiscoveryFilters = movieListState.searchQuery.isNotBlank() ||
+            movieListState.selectedYear != null ||
+            movieListState.selectedLanguage != null ||
+            movieListState.selectedGenre != null
+    val filteredMovies = if (hasDiscoveryFilters) {
+        movieListState.filteredUpcomingMovieList
+    } else {
+        movieListState.upcomingMovieList
+    }.distinctBy(movieKey)
+    val visibleMovieKeys = filteredMovies.map(movieKey).toHashSet()
+    val recommendationMovies = movieListState.recommendedMovies
+        .distinctBy(movieKey)
+        .filterNot { movieKey(it) in visibleMovieKeys }
+
     // Connectivity observer (show toast + message when offline)
     val context = LocalContext.current
     val connectivityObserver = remember { ConnectivityObserver(context) }
     val isOnline by connectivityObserver.isOnline.collectAsState(initial = true)
     val offlineToastShownState = remember { mutableStateOf(false) }
 
-    // Determine the localized offline message based on saved app language
-    val savedLangTag = try { LanguagePrefs.get(context).ifBlank { Locale.getDefault().toLanguageTag() } } catch (_: Exception) { Locale.getDefault().toLanguageTag() }
-    val langPrefix = savedLangTag.split("-").firstOrNull()?.lowercase(Locale.ROOT) ?: Locale.getDefault().language
-    val offlineMessage = when (langPrefix) {
-        "zh", "zh-cn", "zh-hk", "zh-tw" -> "無網路，無法載入即將上映的電影"
-        "ko" -> "인터넷에 연결되어 있지 않습니다. 상영 예정 영화를 불러올 수 없습니다."
-        "ja" -> "インターネットに接続されていません。今後公開予定の映画を読み込めません。"
-        else -> "No internet, unable to load upcoming movies"
-    }
+    val offlineMessage = stringResource(R.string.no_internet_upcoming_movies)
+    val noResultsMessage = stringResource(R.string.no_movies_match_filters)
 
     // Reset the offline toast flag when we come back online so future outages will show the toast
     LaunchedEffect(isOnline) {
@@ -71,22 +96,15 @@ fun UpcomingMoviesScreen(
                     offlineToastShownState.value = true
                 }
             }
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.material3.Text(text = offlineMessage)
-            }
+            ErrorStateView(
+                message = offlineMessage,
+                modifier = Modifier.fillMaxSize()
+            )
             return
         }
 
         // Display a loading indicator if the list is empty and we are online
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
+        LoadingStateView()
     } else {
         // Display a LazyVerticalGrid with two columns
         LazyVerticalGrid(
@@ -94,11 +112,44 @@ fun UpcomingMoviesScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 8.dp, horizontal = 4.dp)
         ) {
+            item(span = { GridItemSpan(2) }) {
+                // Discovery toolbar shared across list tabs.
+                DiscoveryControls(
+                    movieListState = movieListState,
+                    onEvent = onEvent
+                )
+            }
+
+            item(span = { GridItemSpan(2) }) {
+                // Recommendation carousel generated from favorites + current listings.
+                RecommendationsSection(
+                    movies = recommendationMovies,
+                    navController = navController,
+                    favoriteMoviesViewModel = favoriteMoviesViewModel
+                )
+            }
+
+            if (hasDiscoveryFilters && filteredMovies.isEmpty()) {
+                item(span = { GridItemSpan(2) }) {
+                    // Inline empty state keeps the discovery controls visible for quick adjustment.
+                    EmptyStateView(
+                        message = noResultsMessage,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                    )
+                }
+            }
+
             // Iterate over the items in the upcoming movie list
-            items(movieListState.upcomingMovieList.size) { index ->
+            items(
+                count = filteredMovies.size,
+                key = { index -> movieKey(filteredMovies[index]) },
+                contentType = { "movie" }
+            ) { index ->
                 // Display a MovieItem for each movie in the list
                 MovieItem(
-                    movie = movieListState.upcomingMovieList[index] ,
+                    movie = filteredMovies[index] ,
                     navHostController = navController,
                     favoriteMoviesViewModel = favoriteMoviesViewModel
                 )
@@ -106,7 +157,8 @@ fun UpcomingMoviesScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Check if the current items is the last one and not loading
-                if (index >= movieListState.upcomingMovieList.size -1 && !movieListState.isLoading) {
+                if (index >= filteredMovies.size -1 && !movieListState.isLoading) {
+                    // Paginate only when we reach the tail to avoid duplicate requests mid-list.
                     // Trigger pagination for the upcoming category
                     onEvent(MovieListUiEvent.Paginate(Category.UPCOMING))
                 }

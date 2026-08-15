@@ -55,6 +55,7 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.size.Size
 import com.minyu.moviesapp.R
+import com.minyu.moviesapp.core.analytics.AppAnalytics
 import com.minyu.moviesapp.core.auth.SessionManager
 import android.content.pm.ApplicationInfo
 import com.minyu.moviesapp.core.util.ConnectivityObserver
@@ -83,7 +84,7 @@ fun formatReleaseDate(dateString: String?): String {
             val year = cal.get(java.util.Calendar.YEAR)
             "$month $day $year"
         } else dateString
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         dateString
     }
 }
@@ -101,6 +102,10 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
     val context = LocalContext.current
     val connectivityObserver = remember { ConnectivityObserver(context) }
     val isOnline by connectivityObserver.isOnline.collectAsState(initial = true)
+    // Session analytics flags used to compute "drop off" on details exit.
+    val detailsOpenAtMs = remember { System.currentTimeMillis() }
+    val trailerTapped = remember { mutableStateOf(false) }
+    val providerTapped = remember { mutableStateOf(false) }
 
     // Remember whether we've already shown the offline toast for the current offline period
     var offlineToastShown by remember { mutableStateOf(false) }
@@ -119,8 +124,31 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
     // Ensure we unregister the network callback when this composable leaves
     DisposableEffect(Unit) {
         onDispose {
+            // Drop-off means the user left details without tapping trailer/providers.
+            val movieId = detailsState.movie?.id?.toString() ?: "unknown"
+            val stayedMs = (System.currentTimeMillis() - detailsOpenAtMs).coerceAtLeast(0L)
+            val droppedOff = (!trailerTapped.value && !providerTapped.value).toString()
+            AppAnalytics.logEvent(
+                context = context,
+                name = "details_screen_exit",
+                params = mapOf(
+                    "movie_id" to movieId,
+                    "duration_ms" to stayedMs.toString(),
+                    "drop_off" to droppedOff
+                )
+            )
             connectivityObserver.stop()
         }
+    }
+
+    LaunchedEffect(detailsState.movie?.id) {
+        val movieId = detailsState.movie?.id ?: return@LaunchedEffect
+        // Fire once per movie details view.
+        AppAnalytics.logEvent(
+            context = context,
+            name = "details_screen_view",
+            params = mapOf("movie_id" to movieId.toString())
+        )
     }
 
     val translated by translateViewModel.translatedPlot.collectAsState(initial = null)
@@ -143,8 +171,8 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
         isOnline // also react to connectivity changes
     ) {
         val movie = detailsState.movie ?: return@LaunchedEffect
-        val movieOverview = movie.overview.orEmpty()
-        val movieOriginLang = movie.original_language.orEmpty()
+        val movieOverview = movie.overview
+        val movieOriginLang = movie.original_language
         val moviePrefix = movieOriginLang.split("-").firstOrNull().orEmpty().lowercase(Locale.ROOT)
         val targetPrefix =
             normalizedTargetLang.split("-").firstOrNull().orEmpty().lowercase(Locale.ROOT)
@@ -179,7 +207,7 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
         }
     }
 
-    // Load images using Coil for backdrop and poster only when online; otherwise show placeholders
+    // Load backdrop image only when online; otherwise show placeholders
     val backDropImageState = if (isOnline) {
         rememberAsyncImagePainter(
             model = ImageRequest.Builder(LocalContext.current)
@@ -190,19 +218,6 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
     } else {
         null
     }
-
-    val posterImageState = if (isOnline) {
-        rememberAsyncImagePainter(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.poster_path)
-                .size(Size.ORIGINAL)
-                .build()
-        ).state
-    } else {
-        null
-    }
-
-    var reviewText by remember { mutableStateOf("") }
 
     // Main vertical layout with scroll
     Column(
@@ -272,6 +287,16 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                 IconButton(
                     onClick = {
                         android.util.Log.d("DetailsScreen", "Opening trailer in YouTube, trailerKey=$trailerKey")
+                        trailerTapped.value = true
+                        // Engagement event for trailer intent, independent from deep-link success.
+                        AppAnalytics.logEvent(
+                            context = context,
+                            name = "trailer_tap",
+                            params = mapOf(
+                                "movie_id" to (detailsState.movie?.id?.toString() ?: "unknown"),
+                                "has_key" to trailerKey.isNotBlank().toString()
+                            )
+                        )
                         val opened = openTrailerInYouTube(context, trailerKey)
                         if (!opened) {
                             android.widget.Toast.makeText(
@@ -374,6 +399,16 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             if (watchProviderInfo.link.isNotBlank()) {
                 Button(
                     onClick = {
+                        providerTapped.value = true
+                        // Engagement event for provider intent, independent from link-open success.
+                        AppAnalytics.logEvent(
+                            context = context,
+                            name = "where_to_watch_tap",
+                            params = mapOf(
+                                "movie_id" to (detailsState.movie?.id?.toString() ?: "unknown"),
+                                "region" to watchProviderInfo.region
+                            )
+                        )
                         val opened = openWatchProviderLink(context, watchProviderInfo)
                         if (!opened) {
                             android.widget.Toast.makeText(
@@ -401,8 +436,8 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
         if (reviews.isNotEmpty()) {
             // Show list of reviews
             for (review in reviews) {
-                val author = review.userName ?: "Unknown"
-                val content = review.comment ?: ""
+                val author = review.userName
+                val content = review.comment
 
                 Column(
                     modifier = Modifier
@@ -461,7 +496,6 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
         if (loggedIn.value) {
             // Show add review form
             var rating by remember { mutableStateOf(0.0) }
-            var reviewContent by remember { mutableStateOf("") }
 
             Column(
                 modifier = Modifier

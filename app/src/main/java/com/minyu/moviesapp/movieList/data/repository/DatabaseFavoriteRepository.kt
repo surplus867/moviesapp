@@ -24,7 +24,7 @@ class DatabaseFavoriteRepository @Inject constructor(
         return favoriteMovieDao.getAllFavorites().any { it.movieId == movieId }
     }
 
-    // Retrieves all favorite movies, mapping database entities to domain model
+    // Retrieves favorites and keeps stored overview text for recommendation keyword matching.
     override suspend fun getFavoriteMovies(): List<Movie> {
        return favoriteMovieDao.getAllFavorites().map {
            Movie(
@@ -34,7 +34,7 @@ class DatabaseFavoriteRepository @Inject constructor(
                // Provide default or placeholder values for the rest:
                original_language = "",
                original_title = "",
-               overview = "",
+               overview = it.overview,
                popularity = 0.0,
                release_date = "",
                video = false,
@@ -51,7 +51,7 @@ class DatabaseFavoriteRepository @Inject constructor(
        }
     }
 
-    // Removes a movie from favcrites by its ID
+    // Removes a movie from favorites by its ID
     override suspend fun removeFavorite(movieId: Int) {
         favoriteMovieDao.deleteFavoriteById(movieId)
     }

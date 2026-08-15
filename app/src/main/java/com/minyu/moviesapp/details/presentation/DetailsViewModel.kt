@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
-import com.minyu.moviesapp.movieList.domain.repository.FavoriteMovieRepository
 import com.minyu.moviesapp.movieList.domain.repository.MovieListRepository
 import com.minyu.moviesapp.movieList.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,7 +18,6 @@ import javax.inject.Inject
 @HiltViewModel
 class DetailsViewModel @Inject constructor(
     private val movieListRepository: MovieListRepository,
-    private val favoriteMovieRepository: FavoriteMovieRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -48,7 +46,7 @@ class DetailsViewModel @Inject constructor(
         }
     }
 
-    // Function to fetch movie details and trailers
+    // Loads details payload and enriches it with trailer + watch-provider actions.
     private fun getMovie(id: Int) {
         viewModelScope.launch {
             _detailsState.update { it.copy(isLoading = true) }
@@ -62,12 +60,12 @@ class DetailsViewModel @Inject constructor(
                     }
                     is Resource.Success -> {
                         result.data?.let { movie ->
-                            // Fetch trailers + watch providers in one pass so details has full watch actions.
+                            // Keep network lookups together so the UI receives one coherent details state.
                             val trailers = movieListRepository.getMovieTrailers(id)
-                            // Locale country code is used as the TMDB watch-provider region key.
+                            // Use device region for provider lookup; repository handles fallback when unavailable.
                             val region = Locale.getDefault().country.takeIf { it.isNotBlank() } ?: "US"
                             val watchProviderInfo = movieListRepository.getWatchProviders(id, region)
-                            // Update state with movie and trailers
+                            // Persist both watch actions: trailer playback + where-to-watch providers.
                             _detailsState.update {
                                 it.copy(
                                     movie = movie.copy(trailers = trailers),
@@ -82,28 +80,9 @@ class DetailsViewModel @Inject constructor(
         }
     }
 
-    // Add the current movie to favorites
-    fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String) {
-        viewModelScope.launch {
-            val overview = detailsState.value.movie?.overview ?: ""
-            favoriteMovieRepository.addFavorite(
-                movieId = movieId,
-                title = title,
-                posterUrl = posterUrl,
-                overview = overview
-            )
-        }
-    }
-
     fun insertReview(review: MovieReviewEntity) {
         viewModelScope.launch {
             movieListRepository.insertReview(review)
-        }
-    }
-
-    fun deleteReview(reviewId: Int) {
-        viewModelScope.launch {
-            movieListRepository.deleteReview(reviewId)
         }
     }
 }

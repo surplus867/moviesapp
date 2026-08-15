@@ -43,14 +43,6 @@ interface MovieApi {
         @Query("api_key") apikey: String = API_KEY
     ): MovieListDto
 
-    // Fetches Asian dramas by language and genre (genre 18 = Drama)
-    // This is a helper function that calls getMoviesByLanguageAndGenre
-    suspend fun getAsianDramas(
-        language: String,
-        page: Int,
-        apikey: String = API_KEY
-    ): MovieListDto = getMoviesByLanguageAndGenre(language, "18", page, apikey)
-
     // Fetches movies by both language and genre
     @GET("discover/movie")
     suspend fun getMoviesByLanguageAndGenre(

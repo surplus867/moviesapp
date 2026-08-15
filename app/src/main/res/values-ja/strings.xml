@@ -11,4 +11,18 @@
     <string name="asian_movie">アジア映画</string>
     <string name="asian_drama">アジアドラマ</string>
     <string name="error_loading_asian_dramas">エラー: アジアのドラマを読み込めません</string>
+    <string name="error_loading_asian_movies">エラー: アジア映画を読み込めません</string>
+    <string name="no_internet_connection">インターネットに接続されていません</string>
+    <string name="no_internet_movies">インターネットに接続されていないため、映画を読み込めません</string>
+    <string name="no_internet_upcoming_movies">インターネットに接続されていないため、近日公開映画を読み込めません</string>
+    <string name="no_internet_asian_movies">インターネットに接続されていないため、アジア映画を読み込めません</string>
+    <string name="no_movies_match_filters">検索条件に一致する映画がありません。</string>
+    <string name="no_favorite_movies_found">お気に入りの映画が見つかりません。</string>
+    <string name="no_asian_dramas_found">アジアドラマが見つかりません。</string>
+    <string name="favorite_movies_title">お気に入り映画</string>
+    <string name="search_hint">検索</string>
+    <string name="clear_search">検索をクリア</string>
+    <string name="sort_title">タイトル</string>
+    <string name="sort_date_added">追加日</string>
+    <string name="sort_prefix">並び替え: %1$s</string>
 </resources>

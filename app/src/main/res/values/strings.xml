@@ -14,4 +14,18 @@
     <string name="asian" translatable="false">Asian</string>
     <!-- Error messages -->
     <string name="error_loading_asian_dramas">Error loading Asian dramas</string>
+    <string name="error_loading_asian_movies">Error loading Asian movies</string>
+    <string name="no_internet_connection">No internet connection</string>
+    <string name="no_internet_movies">No internet, unable to load movies</string>
+    <string name="no_internet_upcoming_movies">No internet, unable to load upcoming movies</string>
+    <string name="no_internet_asian_movies">No internet, unable to load Asian movies</string>
+    <string name="no_movies_match_filters">No movies matched your search and filters.</string>
+    <string name="no_favorite_movies_found">No favorite movies found.</string>
+    <string name="no_asian_dramas_found">No Asian dramas found.</string>
+    <string name="favorite_movies_title">Favorite Movies</string>
+    <string name="search_hint">Search</string>
+    <string name="clear_search">Clear Search</string>
+    <string name="sort_title">Title</string>
+    <string name="sort_date_added">Date Added</string>
+    <string name="sort_prefix">Sort: %1$s</string>
 </resources>

@@ -29,8 +29,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.minyu.moviesapp.R
+import com.minyu.moviesapp.core.presentation.EmptyStateView
 import com.minyu.moviesapp.movieList.presentation.components.FavoriteMovieItem
 
 
@@ -45,14 +48,17 @@ fun FavoriteMoviesScreen(
     // State for search query and sort option
     var searchQuery by remember { mutableStateOf("") }
     var sortOption by remember { mutableStateOf("Title") }
+    val titleSort = stringResource(R.string.sort_title)
+    val dateAddedSort = stringResource(R.string.sort_date_added)
+    // Keep sort values localized, because the selected label is shown directly in the button text.
 
     // Filter and sort movies based on search and sort option
     val filteredMovies = favoriteMovies
         .filter { it.title.contains(searchQuery, ignoreCase = true) }
         .let {
             when (sortOption) {
-                "Title" -> it.sortedBy { movie -> movie.title }
-                "Date Added" -> it.sortedByDescending { movie ->  movie.dateAdded }
+                titleSort -> it.sortedBy { movie -> movie.title }
+                dateAddedSort -> it.sortedByDescending { movie ->  movie.dateAdded }
                 else -> it
             }
         }
@@ -61,7 +67,7 @@ fun FavoriteMoviesScreen(
         topBar = {
             // App bar with title and back button
             TopAppBar(
-                title = { Text("Favorite Movies") },
+                title = { Text(stringResource(R.string.favorite_movies_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -80,7 +86,7 @@ fun FavoriteMoviesScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Search") },
+                label = { Text(stringResource(R.string.search_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 1,
                 trailingIcon = {
@@ -89,7 +95,7 @@ fun FavoriteMoviesScreen(
                         IconButton(onClick = { searchQuery = "" }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Clear Search"
+                                contentDescription = stringResource(R.string.clear_search)
                             )
                         }
                     }
@@ -100,23 +106,23 @@ fun FavoriteMoviesScreen(
             var expanded by remember { mutableStateOf(false) }
             Box {
                 Button(onClick = { expanded = true }) {
-                    Text("Sort: $sortOption")
+                    Text(stringResource(R.string.sort_prefix, sortOption))
                 }
                 DropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Title") },
+                        text = { Text(titleSort) },
                         onClick = {
-                            sortOption = "Title"
+                            sortOption = titleSort
                             expanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Date Added") },
+                        text = { Text(dateAddedSort) },
                         onClick = {
-                            sortOption = "Date Added"
+                            sortOption = dateAddedSort
                             expanded = false
                         }
                     )
@@ -125,13 +131,13 @@ fun FavoriteMoviesScreen(
             Spacer(modifier = Modifier.height(8.dp))
             // Show empty state or list of favorite movies
             if (filteredMovies.isEmpty()) {
-                Box(
+                // Empty view covers both "no favorites yet" and "no search match" in one localized message.
+                EmptyStateView(
+                    message = stringResource(R.string.no_favorite_movies_found),
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(32.dp)
-                ) {
-                    Text("No favorite movies found.")
-                }
+                )
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
