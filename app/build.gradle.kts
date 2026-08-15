@@ -16,8 +16,8 @@ android {
         applicationId = "com.minyu.moviesapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.0.1"
+        versionCode = 12
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -113,9 +113,6 @@ dependencies {
 
     // Extended Icons
     implementation("androidx.compose.material:material-icons-extended:1.6.8")
-
-    // System UI Controller
-    implementation("com.google.accompanist:accompanist-systemuicontroller:0.27.0")
 
     implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:12.1.0")
 }

@@ -3,6 +3,7 @@ package com.minyu.moviesapp.core
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,9 +14,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.core.os.LocaleListCompat
-import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -25,7 +24,6 @@ import androidx.navigation.navArgument
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.minyu.moviesapp.core.presentation.HomeScreen
 import com.minyu.moviesapp.core.presentation.LanguageSelectionScreen
 import com.minyu.moviesapp.core.presentation.SyncWorker
@@ -58,8 +56,8 @@ class MainActivity : ComponentActivity() {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(saved))
         }
 
-        // Enable edge-to-edge display for all Android versions
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // Use the modern edge-to-edge API so system bars are handled without deprecated flags.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         // create notification channel
@@ -78,8 +76,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MoviesappTheme {
-                // Set system bar color to transparent for edge-to-edge
-                SetBarColor(color = Color.Transparent)
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
@@ -138,15 +134,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-        }
-    }
-
-    // Sets system bar color using accompanist SystemUiController
-    @Composable
-    private fun SetBarColor(color: Color) {
-        val systemUiController = rememberSystemUiController()
-        LaunchedEffect(color) {
-            systemUiController.setSystemBarsColor(color = color, darkIcons = true)
         }
     }
 }
