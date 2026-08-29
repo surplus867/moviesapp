@@ -3,21 +3,19 @@ package com.minyu.moviesapp.movieList.presentation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,10 +23,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.minyu.moviesapp.R
-import com.minyu.moviesapp.core.util.ConnectivityObserver
 import com.minyu.moviesapp.core.presentation.EmptyStateView
 import com.minyu.moviesapp.core.presentation.ErrorStateView
 import com.minyu.moviesapp.core.presentation.LoadingStateView
+import com.minyu.moviesapp.core.util.ConnectivityObserver
 import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import com.minyu.moviesapp.movieList.presentation.components.DiscoveryControls
 import com.minyu.moviesapp.movieList.presentation.components.MovieItem
@@ -112,15 +110,31 @@ fun PopularMoviesScreen(
         return
     }
 
-    // Pagination: load more when near the end
-    LaunchedEffect(gridState, filteredMovies, movieListState.isLoading) {
+    // Pagination: load more when near the end of movie items only.
+    LaunchedEffect(
+        gridState,
+        filteredMovies.size,
+        movieListState.isLoading,
+        hasDiscoveryFilters,
+        recommendationMovies.isNotEmpty()
+    ) {
+        if (hasDiscoveryFilters) return@LaunchedEffect
+
         snapshotFlow {
-            val lastVisible = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-            val total = gridState.layoutInfo.totalItemsCount
-            lastVisible to total
+            val baseOffset = 1 + 1 + if (recommendationMovies.isNotEmpty()) 1 else 0
+            val lastVisibleMovieIndex = gridState.layoutInfo.visibleItemsInfo
+                .mapNotNull { itemInfo ->
+                    val movieIndex = itemInfo.index - baseOffset
+                    movieIndex.takeIf { it in filteredMovies.indices }
+                }
+                .maxOrNull() ?: -1
+
+            lastVisibleMovieIndex to filteredMovies.size
         }
             // Trigger when we are close to the end to hide network latency during scroll.
-            .map { (lastVisible, total) -> lastVisible >= total - 5 && total > 0 }
+            .map { (lastVisibleMovieIndex, totalMovies) ->
+                totalMovies > 0 && lastVisibleMovieIndex >= totalMovies - 5
+            }
             .distinctUntilChanged()
             .collect { shouldLoadMore ->
                 if (shouldLoadMore && !movieListState.isLoading) {

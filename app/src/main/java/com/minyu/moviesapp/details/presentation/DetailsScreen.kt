@@ -42,12 +42,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImagePainter
@@ -69,6 +71,11 @@ import android.content.Intent
 import java.text.SimpleDateFormat
 import java.util.Locale
 import androidx.core.net.toUri
+
+private val CinemaBackground = Color(0xFF08090B)
+private val CinemaSurface = Color(0xFF131519)
+private val CinemaRed = Color(0xFFE50914)
+private val CinemaTextSecondary = Color(0xFF9EA3AA)
 
 // Helper function to format release date nicely
 fun formatReleaseDate(dateString: String?): String {
@@ -223,26 +230,28 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
-            .padding(WindowInsets.statusBars.asPaddingValues())
+            .background(CinemaBackground)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Back button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(WindowInsets.statusBars.asPaddingValues())
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             IconButton(
                 onClick = { navController.popBackStack() },
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(22.dp))
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White
+                )
             }
-
-            // Placeholder for alignment
-            Spacer(modifier = Modifier.width(48.dp))
         }
 
         // Title and release date
@@ -250,14 +259,19 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             text = detailsState.movie?.title ?: "",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 8.dp)
+            color = Color.White,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp)
         )
 
         Text(
             text = formatReleaseDate(detailsState.movie?.release_date),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-            modifier = Modifier.padding(bottom = 16.dp)
+            color = CinemaTextSecondary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp)
         )
 
         // Backdrop image with play button overlay
@@ -265,7 +279,8 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .padding(horizontal = 20.dp)
+                .clip(RoundedCornerShape(14.dp))
         ) {
             val trailerKey = remember(detailsState.movie?.trailers) {
                 selectPreferredTrailerKey(detailsState.movie?.trailers)
@@ -281,6 +296,19 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                 contentDescription = "Backdrop image",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.3f),
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.55f)
+                            )
+                        )
+                    )
             )
 
             if (trailerKey.isNotBlank()) {
@@ -308,8 +336,8 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                     },
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .size(64.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(32.dp))
+                        .size(70.dp)
+                        .background(Color.Black.copy(alpha = 0.72f), RoundedCornerShape(35.dp))
                 ) {
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
@@ -334,7 +362,9 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
 
         // Rating and language
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
         ) {
             // Rating
@@ -349,7 +379,7 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             Text(
                 text = detailsState.movie?.original_language?.uppercase() ?: "",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                color = CinemaTextSecondary,
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
         }
@@ -361,7 +391,10 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             text = "Overview",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
+            color = Color.White,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
         )
 
         // Translated overview text (if available) or original overview as fallback
@@ -369,8 +402,11 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
         Text(
             text = overviewText,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 16.dp)
+            color = Color(0xFFD3D5D8),
+            lineHeight = 24.sp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp)
         )
 
         // Show streaming options only when provider metadata exists for a region.
@@ -380,7 +416,10 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                 text = "Where to Watch (${watchProviderInfo.region})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
+                color = Color.White,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
             )
 
             val providerSummary = if (watchProviderInfo.providers.isNotEmpty()) {
@@ -392,8 +431,10 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             Text(
                 text = providerSummary,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(bottom = 8.dp)
+                color = CinemaTextSecondary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
             )
 
             if (watchProviderInfo.link.isNotBlank()) {
@@ -418,7 +459,12 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                             ).show()
                         }
                     },
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier
+                        .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CinemaRed,
+                        contentColor = Color.White
+                    )
                 ) {
                     Text("Open streaming options")
                 }
@@ -430,7 +476,10 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             text = "Reviews",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
+            color = Color.White,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
         )
 
         if (reviews.isNotEmpty()) {
@@ -442,8 +491,9 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surface)
+                        .background(CinemaSurface)
                         .padding(16.dp)
                         .padding(bottom = 8.dp),
                     horizontalAlignment = Alignment.Start
@@ -457,13 +507,13 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                             text = author,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = Color.White
                         )
 
                         Text(
                             text = "• ${review.timestamp.takeIf { it > 0 }?.let { formatReleaseDate(it.toString()) } ?: ""}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            color = CinemaTextSecondary
                         )
                     }
 
@@ -473,7 +523,7 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                     Text(
                         text = content,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color(0xFFD3D5D8)
                     )
                 }
             }
@@ -482,8 +532,8 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             Text(
                 text = "No reviews yet. Be the first to review!",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                modifier = Modifier.padding(vertical = 16.dp)
+                color = CinemaTextSecondary,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
             )
         }
 
