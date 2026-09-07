@@ -4,6 +4,7 @@
 
 package com.minyu.moviesapp.movieList.data.remote
 
+import com.minyu.moviesapp.movieList.data.remote.respond.MovieCreditsDto
 import com.minyu.moviesapp.movieList.data.remote.respond.MovieListDto
 import com.minyu.moviesapp.movieList.data.remote.respond.TrailerListDto
 import com.minyu.moviesapp.movieList.data.remote.respond.WatchProvidersResponseDto
@@ -51,6 +52,12 @@ interface MovieApi {
         @Query("page") page: Int,
         @Query("api_key") apikey: String = API_KEY
     ): MovieListDto
+
+    @GET("movie/{movie_id}/credits")
+    suspend fun getMovieCredits(
+        @Path("movie_id") movieId: Int,
+        @Query("api_key") apiKey: String = API_KEY
+    ): MovieCreditsDto
 
     companion object {
         // Base URL for TMDB API

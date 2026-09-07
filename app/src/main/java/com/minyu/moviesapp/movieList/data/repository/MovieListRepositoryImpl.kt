@@ -9,6 +9,7 @@ import com.minyu.moviesapp.movieList.data.local.movie.MovieEntity
 import com.minyu.moviesapp.movieList.data.mappers.toMovie
 import com.minyu.moviesapp.movieList.data.mappers.toMovieEntity
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
+import com.minyu.moviesapp.movieList.data.remote.respond.MovieCreditsDto
 import com.minyu.moviesapp.movieList.data.remote.respond.TrailerDto
 import com.minyu.moviesapp.movieList.domain.model.Movie
 import com.minyu.moviesapp.movieList.domain.model.WatchProviderInfo
@@ -305,6 +306,10 @@ class MovieListRepositoryImpl @Inject constructor(
             e.printStackTrace()
             null
         }
+    }
+
+    override suspend fun getMovieCredits(movieId: Int): MovieCreditsDto {
+        return movieApi.getMovieCredits(movieId)
     }
 
     override suspend fun insertReview(review: MovieReviewEntity) {

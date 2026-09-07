@@ -1,6 +1,7 @@
 package com.minyu.moviesapp.movieList.domain.repository
 
 import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
+import com.minyu.moviesapp.movieList.data.remote.respond.MovieCreditsDto
 import com.minyu.moviesapp.movieList.data.remote.respond.TrailerDto
 import com.minyu.moviesapp.movieList.domain.model.Movie
 import com.minyu.moviesapp.movieList.domain.model.WatchProviderInfo
@@ -30,6 +31,8 @@ interface MovieListRepository {
     suspend fun getMovieTrailers(movieId: Int): List<TrailerDto>
 
     suspend fun getWatchProviders(movieId: Int, region: String): WatchProviderInfo?
+
+    suspend fun getMovieCredits(movieId: Int): MovieCreditsDto
 
     suspend fun insertReview(review: MovieReviewEntity)
 

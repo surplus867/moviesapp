@@ -55,20 +55,49 @@ class DetailsViewModel @Inject constructor(
                     is Resource.Error -> {
                         _detailsState.update { it.copy(isLoading = false) }
                     }
+
                     is Resource.Loading -> {
                         _detailsState.update { it.copy(isLoading = result.isLoading) }
                     }
+
                     is Resource.Success -> {
                         result.data?.let { movie ->
                             // Keep network lookups together so the UI receives one coherent details state.
                             val trailers = movieListRepository.getMovieTrailers(id)
+
+                            val credits = movieListRepository.getMovieCredits(id)
+
+                            val director = credits.crew
+                                .firstOrNull { it.job.equals("Director", ignoreCase = true) }
+                                ?.name
+
+                            val topCast = credits.cast
+                                .sortedBy { it.order ?: Int.MAX_VALUE }
+                                .take(5)
+                                .mapNotNull { cast ->
+                                    val actor = cast.name.trim()
+                                    val role = cast.character?.trim().orEmpty()
+                                    when {
+                                        actor.isBlank() -> null
+                                        role.isBlank() -> actor
+                                        else -> "$actor as $role"
+                                    }
+                                }
+
+
                             // Use device region for provider lookup; repository handles fallback when unavailable.
-                            val region = Locale.getDefault().country.takeIf { it.isNotBlank() } ?: "US"
-                            val watchProviderInfo = movieListRepository.getWatchProviders(id, region)
+                            val region =
+                                Locale.getDefault().country.takeIf { it.isNotBlank() } ?: "US"
+                            val watchProviderInfo =
+                                movieListRepository.getWatchProviders(id, region)
                             // Persist both watch actions: trailer playback + where-to-watch providers.
                             _detailsState.update {
                                 it.copy(
-                                    movie = movie.copy(trailers = trailers),
+                                    movie = movie.copy(
+                                        trailers = trailers,
+                                        director = director,
+                                        topCast = topCast
+                                    ),
                                     watchProviderInfo = watchProviderInfo,
                                     isLoading = false
                                 )

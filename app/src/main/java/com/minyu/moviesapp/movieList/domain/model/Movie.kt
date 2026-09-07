@@ -21,5 +21,7 @@ data class Movie(
     val id: Int,
     val category: String,
     val region: String,
-    val trailers: List<TrailerDto> = emptyList()
+    val trailers: List<TrailerDto> = emptyList(),
+    val director: String? = null,
+    val topCast: List<String> = emptyList()
 )

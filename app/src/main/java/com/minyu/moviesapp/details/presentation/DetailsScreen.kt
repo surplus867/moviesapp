@@ -409,6 +409,38 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                 .padding(start = 20.dp, end = 20.dp, bottom = 16.dp)
         )
 
+        val directorText = detailsState.movie?.director.orEmpty()
+        val topCastList = detailsState.movie?.topCast.orEmpty()
+
+        if (directorText.isNotBlank() || topCastList.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "Cast & Crew",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+
+            if (directorText.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Director: $directorText",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CinemaTextSecondary
+                )
+            }
+
+            if (topCastList.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Cast: ${topCastList.joinToString(", ")}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CinemaTextSecondary
+                )
+            }
+        }
+
         // Show streaming options only when provider metadata exists for a region.
         detailsState.watchProviderInfo?.let { watchProviderInfo ->
             Spacer(modifier = Modifier.height(8.dp))
