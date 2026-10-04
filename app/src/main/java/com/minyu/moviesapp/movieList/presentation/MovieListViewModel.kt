@@ -222,7 +222,7 @@ class MovieListViewModel @Inject constructor(
                 // Cold start: rank by community signal (rating/popularity).
                 candidates
                     .filterNot { it.id in favoriteIds }
-                    .sortedWith(compareByDescending<Movie> { it.vote_average }.thenByDescending { it.popularity })
+                    .sortedWith(compareByDescending<Movie> { it.voteAverage }.thenByDescending { it.popularity })
                     .take(10)
             } else {
                 // Personalized path: score by keyword overlap, then break ties by popularity.
@@ -231,7 +231,7 @@ class MovieListViewModel @Inject constructor(
                     .map { movie ->
                         val movieTokens = tokenizeForRecommendation(movie.title) + tokenizeForRecommendation(movie.overview)
                         val overlapScore = movieTokens.count { it in favoriteKeywords }
-                        movie to (overlapScore * 10 + (movie.vote_average * 10).toInt())
+                        movie to (overlapScore * 10 + (movie.voteAverage * 10).toInt())
                     }
                     .sortedWith(
                         compareByDescending<Pair<Movie, Int>> { it.second }
@@ -252,7 +252,7 @@ class MovieListViewModel @Inject constructor(
         // Year options are inferred from release_date prefix (yyyy).
         val availableYears = allMovies
             .mapNotNull { movie ->
-                movie.release_date.takeIf { it.length >= 4 }?.take(4)?.takeIf { year ->
+                movie.releaseDate.takeIf { it.length >= 4 }?.take(4)?.takeIf { year ->
                     year.all(Char::isDigit)
                 }
             }
@@ -260,14 +260,14 @@ class MovieListViewModel @Inject constructor(
             .sortedDescending()
 
         val availableLanguages = allMovies
-            .map { it.original_language.uppercase(Locale.ROOT) }
+            .map { it.originalLanguage.uppercase(Locale.ROOT) }
             .filter { it.isNotBlank() }
             .distinct()
             .sorted()
 
         val availableGenres = allMovies
             .flatMap { movie ->
-                movie.genre_ids.mapNotNull { genreId -> genreNameForId(genreId) }
+                movie.genreIds.mapNotNull { genreId -> genreNameForId(genreId) }
             }
             .distinct()
             .sorted()
@@ -282,11 +282,11 @@ class MovieListViewModel @Inject constructor(
                     movie.title.lowercase(Locale.ROOT).contains(query) ||
                     movie.overview.lowercase(Locale.ROOT).contains(query)
             val matchesYear = state.selectedYear == null ||
-                    movie.release_date.startsWith(state.selectedYear)
+                    movie.releaseDate.startsWith(state.selectedYear)
             val matchesLanguage = selectedLanguage == null ||
-                    movie.original_language.lowercase(Locale.ROOT) == selectedLanguage
+                    movie.originalLanguage.lowercase(Locale.ROOT) == selectedLanguage
             val matchesGenre = selectedGenre == null ||
-                    movie.genre_ids.mapNotNull(::genreNameForId).contains(selectedGenre)
+                    movie.genreIds.mapNotNull(::genreNameForId).contains(selectedGenre)
             return matchesQuery && matchesYear && matchesLanguage && matchesGenre
         }
 
@@ -352,12 +352,12 @@ class MovieListViewModel @Inject constructor(
 
     private fun movieIdentityKey(movie: Movie): String {
         val normalizedTitle = movie.title
-            .ifBlank { movie.original_title }
+            .ifBlank { movie.originalTitle }
             .trim()
             .lowercase(Locale.ROOT)
             .replace(Regex("[^a-z0-9]+"), " ")
             .trim()
-        val year = movie.release_date
+        val year = movie.releaseDate
             .take(4)
             .takeIf { it.all(Char::isDigit) }
             .orEmpty()

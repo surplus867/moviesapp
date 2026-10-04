@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
+import com.minyu.moviesapp.movieList.domain.model.CastMember
 import com.minyu.moviesapp.movieList.domain.repository.MovieListRepository
 import com.minyu.moviesapp.movieList.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -75,15 +76,16 @@ class DetailsViewModel @Inject constructor(
                                 .sortedBy { it.order ?: Int.MAX_VALUE }
                                 .take(5)
                                 .mapNotNull { cast ->
-                                    val actor = cast.name.trim()
-                                    val role = cast.character?.trim().orEmpty()
-                                    when {
-                                        actor.isBlank() -> null
-                                        role.isBlank() -> actor
-                                        else -> "$actor as $role"
-                                    }
+                                    cast.name.trim()
+                                        .takeIf { it.isNotBlank() }
+                                        ?.let { actor ->
+                                            CastMember(
+                                                name = actor,
+                                                character = cast.character?.trim().orEmpty(),
+                                                profilePath = cast.profilePath
+                                            )
+                                        }
                                 }
-
 
                             // Use device region for provider lookup; repository handles fallback when unavailable.
                             val region =

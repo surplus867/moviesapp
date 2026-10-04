@@ -48,7 +48,7 @@ fun FavoriteMovieItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Movie poster image
-            val imageUrl = "https://image.tmdb.org/t/p/w500${movie.poster_path}"
+            val imageUrl = "https://image.tmdb.org/t/p/w500${movie.posterPath}"
             AsyncImage(
                 model = imageUrl,
                 contentDescription = null,

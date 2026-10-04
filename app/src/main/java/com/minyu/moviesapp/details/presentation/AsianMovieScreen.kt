@@ -87,7 +87,7 @@ fun AsianMovieScreen(
                 // Derive years from API data so new years (e.g., 2026+) appear without code changes.
                 val years = state.value.movies
                     .mapNotNull { movie ->
-                        movie.release_date
+                        movie.releaseDate
                             .takeIf { it.length >= 4 }
                             ?.take(4)
                             ?.takeIf { year -> year.all(Char::isDigit) }
@@ -98,7 +98,7 @@ fun AsianMovieScreen(
                 val moviesByCountryAndYear = countries.associateWith { country ->
                     years.associateWith { year ->
                         state.value.movies.filter {
-                            it.country == country && it.release_date.startsWith(year)
+                            it.country == country && it.releaseDate.startsWith(year)
                         }
                     }
                 }

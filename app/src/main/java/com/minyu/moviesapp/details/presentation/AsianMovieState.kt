@@ -64,7 +64,7 @@ class AsianMovieViewModel @Inject constructor(
                             val movies = resource.data ?: emptyList()
                             // Filter movies by language or country
                             val asianMovies = movies.filter {
-                                it.original_language in asianLanguages || it.country in asianCountries
+                                it.originalLanguage in asianLanguages || it.country in asianCountries
                             }
                             _state.update {
                                 it.copy(
@@ -85,7 +85,7 @@ class AsianMovieViewModel @Inject constructor(
             favoriteMovieRepository.addFavorite(
                 movieId = movie.id,
                 title = movie.title,
-                posterUrl = movie.poster_path,
+                posterUrl = movie.posterPath,
                 overview = movie.overview
             )
         }

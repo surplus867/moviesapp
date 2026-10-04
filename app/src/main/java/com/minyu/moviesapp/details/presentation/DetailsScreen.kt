@@ -68,9 +68,12 @@ import com.minyu.moviesapp.movieList.domain.model.WatchProviderInfo
 import com.minyu.moviesapp.movieList.util.RatingBar
 import kotlinx.coroutines.launch
 import android.content.Intent
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.text.style.TextAlign
 import java.text.SimpleDateFormat
 import java.util.Locale
 import androidx.core.net.toUri
+import coil.compose.AsyncImage
 
 private val CinemaBackground = Color(0xFF08090B)
 private val CinemaSurface = Color(0xFF131519)
@@ -120,7 +123,11 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
     // Show a short Toast once when connectivity is lost, reset flag when back online
     LaunchedEffect(isOnline) {
         if (!isOnline && !offlineToastShown) {
-            android.widget.Toast.makeText(context, "No internet connection", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(
+                context,
+                "No internet connection",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
             offlineToastShown = true
         } else if (isOnline) {
             // reset when connectivity is restored so future outages will show a toast again
@@ -174,12 +181,12 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
     LaunchedEffect(
         detailsState.movie?.id,
         normalizedTargetLang,
-        detailsState.movie?.original_language,
+        detailsState.movie?.originalLanguage,
         isOnline // also react to connectivity changes
     ) {
         val movie = detailsState.movie ?: return@LaunchedEffect
         val movieOverview = movie.overview
-        val movieOriginLang = movie.original_language
+        val movieOriginLang = movie.originalLanguage
         val moviePrefix = movieOriginLang.split("-").firstOrNull().orEmpty().lowercase(Locale.ROOT)
         val targetPrefix =
             normalizedTargetLang.split("-").firstOrNull().orEmpty().lowercase(Locale.ROOT)
@@ -218,7 +225,7 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
     val backDropImageState = if (isOnline) {
         rememberAsyncImagePainter(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.backdrop_path)
+                .data(MovieApi.IMAGE_BASE_URL + detailsState.movie?.backdropPath)
                 .size(Size.ORIGINAL)
                 .build()
         ).state
@@ -266,7 +273,7 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
         )
 
         Text(
-            text = formatReleaseDate(detailsState.movie?.release_date),
+            text = formatReleaseDate(detailsState.movie?.releaseDate),
             style = MaterialTheme.typography.bodyMedium,
             color = CinemaTextSecondary,
             modifier = Modifier
@@ -314,7 +321,10 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             if (trailerKey.isNotBlank()) {
                 IconButton(
                     onClick = {
-                        android.util.Log.d("DetailsScreen", "Opening trailer in YouTube, trailerKey=$trailerKey")
+                        android.util.Log.d(
+                            "DetailsScreen",
+                            "Opening trailer in YouTube, trailerKey=$trailerKey"
+                        )
                         trailerTapped.value = true
                         // Engagement event for trailer intent, independent from deep-link success.
                         AppAnalytics.logEvent(
@@ -370,14 +380,14 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
             // Rating
             RatingBar(
                 starsModifier = Modifier.size(18.dp),
-                rating = (detailsState.movie?.vote_average ?: 0.0) / 2.0
+                rating = (detailsState.movie?.voteAverage ?: 0.0) / 2.0
             )
 
             Spacer(modifier = Modifier.width(16.dp))
 
             // Language
             Text(
-                text = detailsState.movie?.original_language?.uppercase() ?: "",
+                text = detailsState.movie?.originalLanguage?.uppercase() ?: "",
                 style = MaterialTheme.typography.bodyMedium,
                 color = CinemaTextSecondary,
                 modifier = Modifier.align(Alignment.CenterVertically)
@@ -433,11 +443,64 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
 
             if (topCastList.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Cast: ${topCastList.joinToString(", ")}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaTextSecondary
-                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(
+                        12.dp
+                    )
+                ) {
+                    topCastList.forEach { cast ->
+                        Column(
+                            modifier = Modifier.width(112.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 112.dp, height = 140.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(CinemaSurface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = cast.name.take(1),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = CinemaTextSecondary
+                                )
+
+                                cast.profilePath?.let { path ->
+                                    AsyncImage(
+                                        model = "${MovieApi.IMAGE_BASE_URL}$path",
+                                        contentDescription = "${cast.name} profile photo",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = cast.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White,
+                                textAlign = TextAlign.Center
+                            )
+
+                            if (cast.character.isNotBlank()) {
+                                Text(
+                                    text = cast.character,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaTextSecondary,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -543,7 +606,10 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                         )
 
                         Text(
-                            text = "• ${review.timestamp.takeIf { it > 0 }?.let { formatReleaseDate(it.toString()) } ?: ""}",
+                            text = "• ${
+                                review.timestamp.takeIf { it > 0 }
+                                    ?.let { formatReleaseDate(it.toString()) } ?: ""
+                            }",
                             style = MaterialTheme.typography.bodySmall,
                             color = CinemaTextSecondary
                         )
@@ -641,7 +707,8 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
         } else {
             // Inline login form (very simple local example)
             // Prefill demo credentials in debug builds to speed up testing
-            val isDebuggable = (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+            val isDebuggable =
+                (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
             val defaultUser = if (isDebuggable) "demo_user" else ""
             val defaultPass = if (isDebuggable) "demo_pass" else ""
             var nameField by remember { mutableStateOf(defaultUser) }
@@ -654,13 +721,30 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                     .background(MaterialTheme.colorScheme.surface)
                     .padding(16.dp)
             ) {
-                Text("Log in to add a review", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "Log in to add a review",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                TextField(value = nameField, onValueChange = { nameField = it }, placeholder = { Text("Username") }, modifier = Modifier.fillMaxWidth())
+                TextField(
+                    value = nameField,
+                    onValueChange = { nameField = it },
+                    placeholder = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                TextField(value = passField, onValueChange = { passField = it }, placeholder = { Text("Password") }, modifier = Modifier.fillMaxWidth())
+                TextField(
+                    value = passField,
+                    onValueChange = { passField = it },
+                    placeholder = { Text("Password") },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End
+                ) {
                     Button(onClick = {
                         // very simple auth: accept any non-empty username
                         if (nameField.isNotBlank()) {
@@ -720,7 +804,7 @@ private fun selectPreferredTrailerKey(trailers: List<TrailerDto>?): String {
                         !it.key.isNullOrBlank()
             }
             ?.key
-        .orEmpty()
+            .orEmpty()
 }
 
 private fun openTrailerInYouTube(context: Context, trailerKey: String): Boolean {

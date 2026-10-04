@@ -45,24 +45,24 @@ fun MovieEntity.toMovie(
 ): Movie{
     return Movie(
         adult = adult,
-        backdrop_path = backdrop_path,
-        original_language = original_language,
+        backdropPath = backdrop_path,
+        originalLanguage = original_language,
         overview = overview,
-        poster_path = poster_path,
-        release_date = release_date,
+        posterPath = poster_path,
+        releaseDate = release_date,
         title = title,
-        vote_average = vote_average,
+        voteAverage = vote_average,
         popularity = popularity,
-        vote_count = vote_count,
+        voteCount = vote_count,
         id = id,
-        original_title = original_title,
+        originalTitle = original_title,
         video = video,
         category = category,
         country = country,
         region = country,
 
         // Convert genre_ids string back to list of Ints, fallback on error
-        genre_ids = try {
+        genreIds = try {
             genre_ids.split(",").map { it.toInt() }
         } catch (e: Exception) {
             listOf(-1, -2)

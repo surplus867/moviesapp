@@ -10,12 +10,12 @@ plugins {
 
 android {
     namespace = "com.minyu.moviesapp"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.minyu.moviesapp"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 12
         versionName = "1.0.2"
 
@@ -58,6 +58,7 @@ configurations.all {
 }
 
 dependencies {
+    implementation("androidx.compose.foundation:foundation:1.12.1")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("androidx.activity:activity-compose:1.9.1")

@@ -33,7 +33,7 @@ class FavoriteMoviesViewModel @Inject constructor(
             favoriteMovieRepository.addFavorite(
                 movie.id,
                 movie.title,
-                movie.poster_path,
+                movie.posterPath,
                 movie.overview
             )
             loadFavoriteMovies()

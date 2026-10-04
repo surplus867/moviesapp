@@ -95,7 +95,7 @@ fun AsianDramaScreen(
                                 ) {
                                     // Poster image for the drama
                                     AsyncImage(
-                                        model = drama.poster_path,
+                                        model = drama.posterPath,
                                         contentDescription = drama.title,
                                         modifier = Modifier
                                             .size(80.dp)

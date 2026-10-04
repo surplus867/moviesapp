@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Theaters
 import androidx.compose.material.icons.rounded.Upcoming
@@ -45,8 +44,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.minyu.moviesapp.R
 import com.minyu.moviesapp.details.presentation.AsianDramaScreen
-import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import com.minyu.moviesapp.details.presentation.AsianMovieScreen
+import com.minyu.moviesapp.details.presentation.FavoriteMoviesViewModel
 import com.minyu.moviesapp.movieList.presentation.MovieListUiEvent
 import com.minyu.moviesapp.movieList.presentation.MovieListViewModel
 import com.minyu.moviesapp.movieList.presentation.PopularMoviesScreen

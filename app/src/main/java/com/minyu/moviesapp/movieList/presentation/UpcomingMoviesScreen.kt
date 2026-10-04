@@ -1,6 +1,5 @@
 package com.minyu.moviesapp.movieList.presentation
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,7 +9,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -43,12 +41,12 @@ fun UpcomingMoviesScreen(
 ) {
     val movieKey: (com.minyu.moviesapp.movieList.domain.model.Movie) -> String = { movie ->
         val normalizedTitle = movie.title
-            .ifBlank { movie.original_title }
+            .ifBlank { movie.originalTitle }
             .trim()
             .lowercase()
             .replace(Regex("[^a-z0-9]+"), " ")
             .trim()
-        val year = movie.release_date.take(4).takeIf { it.all(Char::isDigit) }.orEmpty()
+        val year = movie.releaseDate.take(4).takeIf { it.all(Char::isDigit) }.orEmpty()
         "$normalizedTitle|$year"
     }
 

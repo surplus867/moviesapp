@@ -45,12 +45,12 @@ fun PopularMoviesScreen(
 ) {
     val movieKey: (com.minyu.moviesapp.movieList.domain.model.Movie) -> String = { movie ->
         val normalizedTitle = movie.title
-            .ifBlank { movie.original_title }
+            .ifBlank { movie.originalTitle }
             .trim()
             .lowercase()
             .replace(Regex("[^a-z0-9]+"), " ")
             .trim()
-        val year = movie.release_date.take(4).takeIf { it.all(Char::isDigit) }.orEmpty()
+        val year = movie.releaseDate.take(4).takeIf { it.all(Char::isDigit) }.orEmpty()
         "$normalizedTitle|$year"
     }
 
