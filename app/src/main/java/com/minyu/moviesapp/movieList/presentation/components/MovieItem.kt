@@ -83,7 +83,7 @@ fun MovieItem(
             )
             .clickable {
                 // Navigate to the movie details screen when clicked
-                navHostController.navigate(Screen.Details.route + "/${movie.id}")
+                navHostController.navigate(Screen.Details.route + "/${movie.id}?category=${android.net.Uri.encode(movie.category)}")
             }
     ) {
         // Display a placeholder if there is an error loading the image

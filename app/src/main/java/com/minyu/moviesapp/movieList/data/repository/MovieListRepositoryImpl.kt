@@ -177,13 +177,14 @@ class MovieListRepositoryImpl @Inject constructor(
     }
 
     // Fetch a single movie by its ID from either the local database or emit an error if not found
-    override suspend fun getMovie(id: Int): Flow<Resource<Movie>> {
+    override suspend fun getMovie(id: Int, category: String?): Flow<Resource<Movie>> {
         return flow {
             // Emit loading state to notify the UI that data is being fetched
             emit(Resource.Loading(true))
 
             // Try fetching the movie from the local database
-            val movieEntity = movieDatabase.movieDao().getMovieById(id)
+            val movieEntity = category?.let { movieDatabase.movieDao().getMovieByIdAndCategory(id, it) }
+                ?: movieDatabase.movieDao().getMovieById(id)
 
             // Check if the movie was found in the local database and emit the result
             emit(
@@ -267,8 +268,14 @@ class MovieListRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getMovieTrailers(movieId: Int, isTv: Boolean): List<TrailerDto> {
-        val trailers = if (isTv) movieApi.getTvTrailers(movieId).results
-        else movieApi.getMovieTrailers(movieId).results
+        val trailers = try {
+            if (isTv) movieApi.getTvTrailers(movieId).results
+            else movieApi.getMovieTrailers(movieId).results
+        } catch (e: IOException) {
+            emptyList()
+        } catch (e: HttpException) {
+            emptyList()
+        }
         Log.d("Test", "Fetched trailers: ${trailers.size}")
         return trailers
     }
@@ -314,7 +321,13 @@ class MovieListRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getMovieCredits(movieId: Int, isTv: Boolean): MovieCreditsDto {
-        return if (isTv) movieApi.getTvCredits(movieId) else movieApi.getMovieCredits(movieId)
+        return try {
+            if (isTv) movieApi.getTvCredits(movieId) else movieApi.getMovieCredits(movieId)
+        } catch (e: IOException) {
+            MovieCreditsDto()
+        } catch (e: HttpException) {
+            MovieCreditsDto()
+        }
     }
 
     override suspend fun insertReview(review: MovieReviewEntity) {

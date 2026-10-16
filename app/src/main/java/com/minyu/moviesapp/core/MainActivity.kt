@@ -103,8 +103,15 @@ class MainActivity : ComponentActivity() {
                         }
                         // Movie details screen
                         composable(
-                            Screen.Details.route + "/{movieId}",
-                            arguments = listOf(navArgument("movieId") { type = NavType.IntType })
+                            Screen.Details.route + "/{movieId}?category={category}",
+                            arguments = listOf(
+                                navArgument("movieId") { type = NavType.IntType },
+                                navArgument("category") {
+                                    type = NavType.StringType
+                                    nullable = true
+                                    defaultValue = null
+                                }
+                            )
                         ) {
                             DetailsScreen(navController)
                         }

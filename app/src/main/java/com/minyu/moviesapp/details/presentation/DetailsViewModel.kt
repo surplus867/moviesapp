@@ -24,6 +24,7 @@ class DetailsViewModel @Inject constructor(
 
     // Retrieve the movie ID from SavedStateHandle
     private val movieId = savedStateHandle.get<Int>("movieId")
+    private val category = savedStateHandle.get<String>("category")
 
     // Internal mutable state flow for managing details screen state
     private var _detailsState = MutableStateFlow(DetailsState())
@@ -51,7 +52,7 @@ class DetailsViewModel @Inject constructor(
     private fun getMovie(id: Int) {
         viewModelScope.launch {
             _detailsState.update { it.copy(isLoading = true) }
-            movieListRepository.getMovie(id).collect { result ->
+            movieListRepository.getMovie(id, category).collect { result ->
                 when (result) {
                     is Resource.Error -> {
                         _detailsState.update { it.copy(isLoading = false) }
