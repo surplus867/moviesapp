@@ -1,6 +1,7 @@
 package com.minyu.moviesapp.movieList.data.repository
 
 
+import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -11,12 +12,16 @@ import com.minyu.moviesapp.movieList.data.local.movie.MovieEntity
 import com.minyu.moviesapp.movieList.data.mappers.toMovie
 import com.minyu.moviesapp.movieList.data.mappers.toMovieEntity
 import com.minyu.moviesapp.movieList.data.remote.MovieApi
+import com.minyu.moviesapp.movieList.data.remote.respond.LocalizedDetailsDto
 import com.minyu.moviesapp.movieList.data.remote.respond.MovieCreditsDto
 import com.minyu.moviesapp.movieList.data.remote.respond.TrailerDto
 import com.minyu.moviesapp.movieList.domain.model.Movie
 import com.minyu.moviesapp.movieList.domain.model.WatchProviderInfo
 import com.minyu.moviesapp.movieList.domain.repository.MovieListRepository
 import com.minyu.moviesapp.movieList.util.Resource
+import com.minyu.moviesapp.core.LanguagePrefs
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -26,7 +31,8 @@ import javax.inject.Inject
 
 class MovieListRepositoryImpl @Inject constructor(
     private val movieApi: MovieApi,
-    private val movieDatabase: MovieDatabase
+    private val movieDatabase: MovieDatabase,
+    @ApplicationContext private val context: Context
 ) : MovieListRepository {
 
     // Short TTL prevents stale local cache from hiding newly released titles.
@@ -48,6 +54,7 @@ class MovieListRepositoryImpl @Inject constructor(
             // Check if local data should be used and emit the result
             val shouldLoadLocalMovie = localMovieList.isNotEmpty() &&
                     !forceFetchFromRemote &&
+                    isCachedInCurrentLanguage(category) &&
                     isCacheFresh(localMovieList.map { it.dateAdded })
             if (shouldLoadLocalMovie) {
                 emit(Resource.Success(data = localMovieList.map {
@@ -64,7 +71,7 @@ class MovieListRepositoryImpl @Inject constructor(
 
             // Fetch movies from the remote API
             val movieListFromApi = try {
-                movieApi.getMoviesList(category, page)
+                movieApi.getMoviesList(category, page, displayLanguage = currentLanguage())
             } catch (e: IOException) {
                 // Handle network or IO errors
                 e.printStackTrace()
@@ -90,6 +97,7 @@ class MovieListRepositoryImpl @Inject constructor(
             }
 
             movieDatabase.movieDao().upsertMovieList(movieEntities)
+            markCachedLanguage(category)
 
             // Emit the transformed data to the UI
             emit(
@@ -117,6 +125,7 @@ class MovieListRepositoryImpl @Inject constructor(
 
         if (localMovieList.isNotEmpty() &&
             !forceFetchFromRemote &&
+            isCachedInCurrentLanguage("asianMovies") &&
             isCacheFresh(localMovieList.map { it.dateAdded })
         ) {
             emit(
@@ -140,6 +149,7 @@ class MovieListRepositoryImpl @Inject constructor(
                 val response = movieApi.getMoviesByLanguage(
                     language = lang,
                     page = page,
+                    displayLanguage = currentLanguage()
                 )
                 val entities = response.results.map { dto ->
                     dto.toMovieEntity(category = category, country = country)
@@ -166,6 +176,7 @@ class MovieListRepositoryImpl @Inject constructor(
         // Save all at once
         if (aggregatedEntities.isNotEmpty()) {
             movieDatabase.movieDao().upsertMovieList(aggregatedEntities)
+            markCachedLanguage("asianMovies")
         }
 
         emit(
@@ -216,6 +227,7 @@ class MovieListRepositoryImpl @Inject constructor(
 
         if (localDramaList.isNotEmpty() &&
             !forceFetchFromRemote &&
+            isCachedInCurrentLanguage("asianDramas") &&
             isCacheFresh(localDramaList.map { it.dateAdded })
         ) {
             emit(Resource.Success(localDramaList.map { it.toMovie(it.category, it.country) }))
@@ -236,7 +248,8 @@ class MovieListRepositoryImpl @Inject constructor(
                  val response = movieApi.discoverTvShows(
                      language = lang,
                      airedBefore = today,
-                     page = page
+                     page = page,
+                     displayLanguage = currentLanguage()
                  )
                  val entities = response.results.map { it.toMovieEntity(category, country) }
                  aggregatedEntities.addAll(entities)
@@ -249,6 +262,7 @@ class MovieListRepositoryImpl @Inject constructor(
 
         if (aggregatedEntities.isNotEmpty()) {
             movieDatabase.movieDao().upsertMovieList(aggregatedEntities)
+            markCachedLanguage("asianDramas")
         }
 
         emit(Resource.Success(aggregatedEntities.map { it.toMovie(it.category, it.country) }))
@@ -330,6 +344,20 @@ class MovieListRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getLocalizedDetails(
+        id: Int,
+        isTv: Boolean,
+        language: String
+    ): LocalizedDetailsDto? {
+        return try {
+            if (isTv) movieApi.getTvDetails(id, language) else movieApi.getMovieDetails(id, language)
+        } catch (e: IOException) {
+            null
+        } catch (e: HttpException) {
+            null
+        }
+    }
+
     override suspend fun insertReview(review: MovieReviewEntity) {
         movieDatabase.movieReviewDao().insertReview(review)
     }
@@ -341,6 +369,21 @@ class MovieListRepositoryImpl @Inject constructor(
     override suspend fun deleteReview(reviewId: Int) {
         movieDatabase.movieReviewDao().deleteReviewById(reviewId)
 
+    }
+
+    private fun currentLanguage(): String =
+        LanguagePrefs.get(context).ifBlank { Locale.getDefault().toLanguageTag() }
+
+    private val cacheLanguagePrefs by lazy {
+        context.getSharedPreferences("list_cache_language", Context.MODE_PRIVATE)
+    }
+
+    // Cached rows keep the language they were fetched in, so refetch when the app language changes.
+    private fun isCachedInCurrentLanguage(key: String): Boolean =
+        cacheLanguagePrefs.getString(key, null) == currentLanguage()
+
+    private fun markCachedLanguage(key: String) {
+        cacheLanguagePrefs.edit().putString(key, currentLanguage()).apply()
     }
 
     private fun isCacheFresh(dateAddedValues: List<Long>): Boolean {

@@ -4,6 +4,7 @@
 
 package com.minyu.moviesapp.movieList.data.remote
 
+import com.minyu.moviesapp.movieList.data.remote.respond.LocalizedDetailsDto
 import com.minyu.moviesapp.movieList.data.remote.respond.MovieCreditsDto
 import com.minyu.moviesapp.movieList.data.remote.respond.MovieListDto
 import com.minyu.moviesapp.movieList.data.remote.respond.TrailerListDto
@@ -19,6 +20,7 @@ interface MovieApi {
     suspend fun getMoviesList(
         @Path("category") category: String,
         @Query("page") page: Int,
+        @Query("language") displayLanguage: String? = null,
         @Query("api_key") apikey: String = API_KEY
     ): MovieListDto
 
@@ -42,6 +44,7 @@ interface MovieApi {
         @Query("with_original_language") language: String = "ko",
         @Query("sort_by") sortBy: String = "popularity.desc",
         @Query("page") page: Int,
+        @Query("language") displayLanguage: String? = null,
         @Query("api_key") apikey: String = API_KEY
     ): MovieListDto
 
@@ -61,6 +64,7 @@ interface MovieApi {
         @Query("sort_by") sortBy: String = "first_air_date.desc",
         @Query("first_air_date.lte") airedBefore: String,
         @Query("page") page: Int = 1,
+        @Query("language") displayLanguage: String? = null,
         @Query("api_key") apiKey: String = API_KEY
     ): TvShowListDto
 
@@ -69,6 +73,21 @@ interface MovieApi {
         @Path("movie_id") movieId: Int,
         @Query("api_key") apiKey: String = API_KEY
     ): MovieCreditsDto
+
+    // Localized title/overview straight from TMDB's own translations.
+    @GET("movie/{movie_id}")
+    suspend fun getMovieDetails(
+        @Path("movie_id") movieId: Int,
+        @Query("language") language: String,
+        @Query("api_key") apiKey: String = API_KEY
+    ): LocalizedDetailsDto
+
+    @GET("tv/{tv_id}")
+    suspend fun getTvDetails(
+        @Path("tv_id") tvId: Int,
+        @Query("language") language: String,
+        @Query("api_key") apiKey: String = API_KEY
+    ): LocalizedDetailsDto
 
     @GET("tv/{tv_id}/credits")
     suspend fun getTvCredits(

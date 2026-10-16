@@ -101,10 +101,9 @@ fun formatReleaseDate(dateString: String?): String {
 
 // Main details screen composable
 @Composable
-fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
+fun DetailsScreen(navController: NavController) {
     // Get ViewModel and state
     val detailsViewModel = hiltViewModel<DetailsViewModel>()
-    val translateViewModel = hiltViewModel<DetailsTranslateViewModel>()
     val detailsState = detailsViewModel.detailsState.collectAsState().value
     val reviews by detailsViewModel.reviews.collectAsState(emptyList<MovieReviewEntity>())
 
@@ -165,61 +164,7 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
         )
     }
 
-    val translated by translateViewModel.translatedPlot.collectAsState(initial = null)
     val original = detailsState.movie?.overview ?: ""
-
-    // normalize selected/target language for translator
-    val normalizedTargetLang = when (selectedLang.lowercase(Locale.ROOT)) {
-        "zh" -> "zh-CN"
-        else -> selectedLang
-    }
-    // short code to send to translator (many translator APIS expect the 2-letter code)
-    val translatorTargetLang =
-        normalizedTargetLang.split("-").firstOrNull().orEmpty().lowercase(Locale.ROOT)
-
-    // Trigger translation when overview or selected language changes
-    LaunchedEffect(
-        detailsState.movie?.id,
-        normalizedTargetLang,
-        detailsState.movie?.originalLanguage,
-        isOnline // also react to connectivity changes
-    ) {
-        val movie = detailsState.movie ?: return@LaunchedEffect
-        val movieOverview = movie.overview
-        val movieOriginLang = movie.originalLanguage
-        val moviePrefix = movieOriginLang.split("-").firstOrNull().orEmpty().lowercase(Locale.ROOT)
-        val targetPrefix =
-            normalizedTargetLang.split("-").firstOrNull().orEmpty().lowercase(Locale.ROOT)
-
-        val sameLang = movieOriginLang.equals(normalizedTargetLang, ignoreCase = true) ||
-                moviePrefix == targetPrefix
-
-        // debug log to verify trigger conditions
-        android.util.Log.d(
-            "DetailsScreen",
-            "translate trigger overviewPresent=${movieOverview.isNotBlank()} sameLang=$sameLang origin=$movieOriginLang target=$translatorTargetLang isOnline=$isOnline"
-        )
-
-        // If offline, don't attempt translation
-        if (!isOnline) return@LaunchedEffect
-
-        if (movieOverview.isNotBlank() && !sameLang) {
-            // use the normalized full target (e.g. "zh-CN") and the full origin if available
-            val sourceForApi = movieOriginLang.takeIf { it.isNotBlank() } ?: moviePrefix
-            val targetForApi = normalizedTargetLang
-
-            android.util.Log.d(
-                "DetailsScreen",
-                "calling translateViewModel.translatePlot len=${movieOverview.length} source=$sourceForApi target=$targetForApi"
-            )
-
-            translateViewModel.translatePlot(
-                movieOverview,
-                targetLang = targetForApi,
-                sourceLang = sourceForApi
-            )
-        }
-    }
 
     // Load backdrop image only when online; otherwise show placeholders
     val backDropImageState = if (isOnline) {
@@ -407,8 +352,8 @@ fun DetailsScreen(navController: NavController, selectedLang: String = "zh") {
                 .padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
         )
 
-        // Translated overview text (if available) or original overview as fallback
-        val overviewText = translated ?: original
+        // Overview is already localized by the ViewModel
+        val overviewText = original
         Text(
             text = overviewText,
             style = MaterialTheme.typography.bodyLarge,

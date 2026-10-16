@@ -1,5 +1,6 @@
 package com.minyu.moviesapp.details.presentation
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,7 +8,9 @@ import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
 import com.minyu.moviesapp.movieList.domain.model.CastMember
 import com.minyu.moviesapp.movieList.domain.repository.MovieListRepository
 import com.minyu.moviesapp.movieList.util.Resource
+import com.minyu.moviesapp.core.LanguagePrefs
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -19,6 +22,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DetailsViewModel @Inject constructor(
     private val movieListRepository: MovieListRepository,
+    @ApplicationContext private val appContext: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -66,6 +70,14 @@ class DetailsViewModel @Inject constructor(
                         result.data?.let { movie ->
                             // Keep network lookups together so the UI receives one coherent details state.
                             val isTv = movie.category.contains("drama", ignoreCase = true)
+                            // Use the saved app language; fall back to the original text when TMDB has no translation.
+                            val language = LanguagePrefs.get(appContext)
+                                .ifBlank { Locale.getDefault().toLanguageTag() }
+                            val localized = movieListRepository.getLocalizedDetails(id, isTv, language)
+                            val localizedTitle = (if (isTv) localized?.name else localized?.title)
+                                ?.takeIf { it.isNotBlank() }
+                            val localizedOverview = localized?.overview?.takeIf { it.isNotBlank() }
+
                             val trailers = movieListRepository.getMovieTrailers(id, isTv)
 
                             val credits = movieListRepository.getMovieCredits(id, isTv)
@@ -98,6 +110,8 @@ class DetailsViewModel @Inject constructor(
                             _detailsState.update {
                                 it.copy(
                                     movie = movie.copy(
+                                        title = localizedTitle ?: movie.title,
+                                        overview = localizedOverview ?: movie.overview,
                                         trailers = trailers,
                                         director = director,
                                         topCast = topCast
