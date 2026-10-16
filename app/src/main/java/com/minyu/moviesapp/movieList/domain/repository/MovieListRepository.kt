@@ -28,11 +28,11 @@ interface MovieListRepository {
     ): Flow<Resource<List<Movie>>>
     suspend fun addFavoriteMovie(movieId: Int, title: String, posterUrl: String)
 
-    suspend fun getMovieTrailers(movieId: Int): List<TrailerDto>
+    suspend fun getMovieTrailers(movieId: Int, isTv: Boolean = false): List<TrailerDto>
 
-    suspend fun getWatchProviders(movieId: Int, region: String): WatchProviderInfo?
+    suspend fun getWatchProviders(movieId: Int, region: String, isTv: Boolean = false): WatchProviderInfo?
 
-    suspend fun getMovieCredits(movieId: Int): MovieCreditsDto
+    suspend fun getMovieCredits(movieId: Int, isTv: Boolean = false): MovieCreditsDto
 
     suspend fun insertReview(review: MovieReviewEntity)
 

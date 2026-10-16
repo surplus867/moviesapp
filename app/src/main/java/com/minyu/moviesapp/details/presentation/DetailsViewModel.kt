@@ -64,9 +64,10 @@ class DetailsViewModel @Inject constructor(
                     is Resource.Success -> {
                         result.data?.let { movie ->
                             // Keep network lookups together so the UI receives one coherent details state.
-                            val trailers = movieListRepository.getMovieTrailers(id)
+                            val isTv = movie.category.contains("drama", ignoreCase = true)
+                            val trailers = movieListRepository.getMovieTrailers(id, isTv)
 
-                            val credits = movieListRepository.getMovieCredits(id)
+                            val credits = movieListRepository.getMovieCredits(id, isTv)
 
                             val director = credits.crew
                                 .firstOrNull { it.job.equals("Director", ignoreCase = true) }
@@ -91,7 +92,7 @@ class DetailsViewModel @Inject constructor(
                             val region =
                                 Locale.getDefault().country.takeIf { it.isNotBlank() } ?: "US"
                             val watchProviderInfo =
-                                movieListRepository.getWatchProviders(id, region)
+                                movieListRepository.getWatchProviders(id, region, isTv)
                             // Persist both watch actions: trailer playback + where-to-watch providers.
                             _detailsState.update {
                                 it.copy(

@@ -2,6 +2,7 @@ package com.minyu.moviesapp.movieList.data.mappers
 
 import com.minyu.moviesapp.movieList.data.local.movie.MovieEntity
 import com.minyu.moviesapp.movieList.data.remote.respond.MovieDto
+import com.minyu.moviesapp.movieList.data.remote.respond.TvShowDto
 import com.minyu.moviesapp.movieList.domain.model.Movie
 
 // Maps MovieDto (from API) to MovieEntity (for local database)
@@ -71,3 +72,23 @@ fun MovieEntity.toMovie(
         dateAdded = dateAdded
     )
 }
+
+fun TvShowDto.toMovieEntity(category: String, country: String) = MovieEntity(
+    id = id,
+    category = category,
+    country = country,
+    adult = false,
+    backdrop_path = backdropPath.orEmpty(),
+    genre_ids = genreIds.joinToString(","),
+    original_language = originalLanguage,
+    original_title = originalName,
+    overview = overview,
+    popularity = popularity,
+    dateAdded = System.currentTimeMillis(),
+    poster_path = posterPath.orEmpty(),
+    release_date = firstAirDate.orEmpty(),
+    title = name,
+    video = false,
+    vote_average = voteAverage,
+    vote_count = voteCount
+)

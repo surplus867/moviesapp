@@ -5,39 +5,34 @@
 
 package com.minyu.moviesapp.details.presentation
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DividerDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import coil.compose.AsyncImage
 import com.minyu.moviesapp.R
 import com.minyu.moviesapp.core.presentation.EmptyStateView
 import com.minyu.moviesapp.core.presentation.ErrorStateView
 import com.minyu.moviesapp.core.presentation.LoadingStateView
+import com.minyu.moviesapp.core.util.ConnectivityObserver
+import com.minyu.moviesapp.movieList.presentation.components.MovieItem
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -50,77 +45,82 @@ fun AsianDramaScreen(
     // Observe the UI state from the ViewModel
     val uiState by viewModel.uiState.collectAsState()
 
-    // Scaffold provides the top app bar and main content area
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.asian_drama)) })
-        }
-    ) { padding ->
-        // Main content area with padding from Scaffold
-        Box(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-        ) {
-            // Show loading indicator if dramas are being loaded
-            when {
-                uiState.isLoading -> {
-                    LoadingStateView()
-                }
-                // Show error message if there is an error (use localized string)
-                uiState.error != null -> {
-                    // Route all failure copy through resources for localization consistency.
-                    ErrorStateView(stringResource(R.string.error_loading_asian_dramas))
-                }
-                uiState.dramas.isEmpty() -> {
-                    // Dedicated empty state makes "loaded but empty" clear vs loading/error.
-                    EmptyStateView(stringResource(R.string.no_asian_dramas_found))
-                }
-                // Show the list of dramas if data is loaded
-                else -> {
-                    LazyColumn {
-                        items(uiState.dramas) { drama ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(8.dp)
-                                    .clickable {
-                                        navHostController.navigate("details/${drama.id}")
-                                    },
-                                elevation = CardDefaults.cardElevation()
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Poster image for the drama
-                                    AsyncImage(
-                                        model = drama.posterPath,
-                                        contentDescription = drama.title,
-                                        modifier = Modifier
-                                            .size(80.dp)
-                                            .padding(end = 8.dp)
+    val context = LocalContext.current
+    val connectivityObserver = remember { ConnectivityObserver(context) }
+    val isOnline by connectivityObserver.isOnline.collectAsState(initial = true)
+    val offlineMessage = stringResource(R.string.no_internet_asian_movies)
+
+    DisposableEffect(Unit) {
+        onDispose { connectivityObserver.stop() }
+    }
+
+    // Show the offline message instead of a stuck spinner when nothing is cached.
+    if (!isOnline && uiState.dramas.isEmpty()) {
+        ErrorStateView(message = offlineMessage)
+        return
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            uiState.isLoading -> {
+                LoadingStateView(modifier = Modifier.align(Alignment.Center))
+            }
+
+            uiState.error != null -> {
+                ErrorStateView(
+                    message = stringResource(R.string.error_loading_asian_dramas),
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+
+            uiState.dramas.isEmpty() -> {
+                EmptyStateView(stringResource(R.string.no_asian_dramas_found))
+            }
+
+            else -> {
+                val countries = uiState.dramas.map { it.country }.distinct()
+                val years = uiState.dramas
+                    .mapNotNull { drama ->
+                        drama.releaseDate
+                            .takeIf { it.length >= 4 }
+                            ?.take(4)
+                            ?.takeIf { year -> year.all(Char::isDigit) }
+                    }
+                    .distinct()
+                    .sortedDescending()
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(8.dp)
+                ) {
+                    countries.forEach { country ->
+                        item(span = { GridItemSpan(2) }) {
+                            Text(
+                                text = country,
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+                        years.forEach { year ->
+                            val dramas = uiState.dramas.filter {
+                                it.country == country && it.releaseDate.startsWith(year)
+                            }
+                            if (dramas.isNotEmpty()) {
+                                item(span = { GridItemSpan(2) }) {
+                                    Text(
+                                        text = year,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        modifier = Modifier.padding(8.dp)
                                     )
-                                    // Column for title and overview
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = drama.title,
-                                            style = MaterialTheme.typography.titleMedium
-                                        )
-                                        Text(
-                                            text = drama.overview,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                }
+                                items(dramas) { drama ->
+                                    MovieItem(
+                                        movie = drama,
+                                        navHostController = navHostController,
+                                        favoriteMoviesViewModel = favoriteMoviesViewModel
+                                    )
                                 }
                             }
-                            HorizontalDivider(
-                                Modifier,
-                                DividerDefaults.Thickness,
-                                DividerDefaults.color
-                            )
                         }
                     }
                 }

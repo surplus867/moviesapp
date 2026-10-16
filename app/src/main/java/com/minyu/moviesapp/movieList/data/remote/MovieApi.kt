@@ -7,6 +7,7 @@ package com.minyu.moviesapp.movieList.data.remote
 import com.minyu.moviesapp.movieList.data.remote.respond.MovieCreditsDto
 import com.minyu.moviesapp.movieList.data.remote.respond.MovieListDto
 import com.minyu.moviesapp.movieList.data.remote.respond.TrailerListDto
+import com.minyu.moviesapp.movieList.data.remote.respond.TvShowListDto
 import com.minyu.moviesapp.movieList.data.remote.respond.WatchProvidersResponseDto
 import retrofit2.http.GET
 import retrofit2.http.Path
@@ -34,7 +35,7 @@ interface MovieApi {
         @Path("movie_id") movieId: Int,
         @Query("api_key") apikey: String = API_KEY
     ): WatchProvidersResponseDto
-                           
+
     // Fetches movies by original language (e.g., Korean, Chinese, Japanese)
     @GET("discover/movie")
     suspend fun getMoviesByLanguage(
@@ -53,17 +54,47 @@ interface MovieApi {
         @Query("api_key") apikey: String = API_KEY
     ): MovieListDto
 
+    @GET("discover/tv")
+    suspend fun discoverTvShows(
+        @Query("with_original_language") language: String,
+        @Query("with_genres") genre: String = "18",
+        @Query("sort_by") sortBy: String = "first_air_date.desc",
+        @Query("first_air_date.lte") airedBefore: String,
+        @Query("page") page: Int = 1,
+        @Query("api_key") apiKey: String = API_KEY
+    ): TvShowListDto
+
     @GET("movie/{movie_id}/credits")
     suspend fun getMovieCredits(
         @Path("movie_id") movieId: Int,
         @Query("api_key") apiKey: String = API_KEY
     ): MovieCreditsDto
 
+    @GET("tv/{tv_id}/credits")
+    suspend fun getTvCredits(
+        @Path("tv_id") tvId: Int,
+        @Query("api_key") apiKey: String = API_KEY
+    ): MovieCreditsDto
+
+    @GET("tv/{tv_id}/videos")
+    suspend fun getTvTrailers(
+        @Path("tv_id") tvId: Int,
+        @Query("api_key") apiKey: String = API_KEY
+    ): TrailerListDto
+
+    @GET("tv/{tv_id}/watch/providers")
+    suspend fun getTvWatchProviders(
+        @Path("tv_id") tvId: Int,
+        @Query("api_key") apiKey: String = API_KEY
+    ): WatchProvidersResponseDto
+
     companion object {
         // Base URL for TMDB API
         const val BASE_URL = "https://api.themoviedb.org/3/"
+
         // Base URL for movie images
         const val IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"
+
         // API key for authentication (should be set securely)
         const val API_KEY = "05663a72e30277317e18431232478d06"
     }

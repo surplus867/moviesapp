@@ -1,7 +1,9 @@
 package com.minyu.moviesapp.movieList.data.repository
 
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import com.minyu.moviesapp.movieList.data.local.entity.FavoriteMovieEntity
 import com.minyu.moviesapp.movieList.data.local.entity.MovieReviewEntity
 import com.minyu.moviesapp.movieList.data.local.movie.MovieDatabase
@@ -195,6 +197,7 @@ class MovieListRepositoryImpl @Inject constructor(
         }
     }
 
+     @RequiresApi(Build.VERSION_CODES.O)
      override suspend fun getAsianDramaList(
         forceFetchFromRemote: Boolean,
         page: Int
@@ -206,7 +209,7 @@ class MovieListRepositoryImpl @Inject constructor(
         val asianLanguageCodes = listOf("ja", "zh", "ko")
 
         // Try local cache first
-        val localDramaList = asianCountries.zip(asianCountries).flatMap { (category, country) ->
+        val localDramaList = asianCategories.zip(asianCountries).flatMap { (category, country) ->
             movieDatabase.movieDao().getMovieListByCategoryAndCountry(category, country)
         }
 
@@ -221,27 +224,27 @@ class MovieListRepositoryImpl @Inject constructor(
 
         val aggregatedEntities = mutableListOf<MovieEntity>()
 
-        for(i in asianCountries.indices) {
-            val category = asianCategories[i]
-            val country = asianCountries[i]
-            val lang = asianLanguageCodes[i]
+         for (i in asianCountries.indices) {
+             val category = asianCategories[i]
+             val country = asianCountries[i]
+             val lang = asianLanguageCodes[i]
 
-            try {
-                val response = movieApi.getMoviesByLanguageAndGenre(
-                    language = lang,
-                    genre = "18",
-                    page = page
-                )
-                val entities = response.results.map { dto ->
-                    dto.toMovieEntity(category = category, country = country)
-                }
-                aggregatedEntities.addAll(entities)
-            } catch (e: Exception) {
-                emit(Resource.Error(message = "Error loading $country dramas"))
-                emit(Resource.Loading(false))
-                return@flow
-            }
-        }
+             try {
+                 val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                    .format(java.util.Date())
+                 val response = movieApi.discoverTvShows(
+                     language = lang,
+                     airedBefore = today,
+                     page = page
+                 )
+                 val entities = response.results.map { it.toMovieEntity(category, country) }
+                 aggregatedEntities.addAll(entities)
+             } catch (e: Exception) {
+                 emit(Resource.Error(message = "Error loading $country dramas"))
+                 emit(Resource.Loading(false))
+                 return@flow
+             }
+         }
 
         if (aggregatedEntities.isNotEmpty()) {
             movieDatabase.movieDao().upsertMovieList(aggregatedEntities)
@@ -263,15 +266,17 @@ class MovieListRepositoryImpl @Inject constructor(
         movieDatabase.favoriteMovieDao().insertFavorite(favoriteMovieEntity)
     }
 
-    override suspend fun getMovieTrailers(movieId: Int): List<TrailerDto> {
-        val trailers = movieApi.getMovieTrailers(movieId).results
+    override suspend fun getMovieTrailers(movieId: Int, isTv: Boolean): List<TrailerDto> {
+        val trailers = if (isTv) movieApi.getTvTrailers(movieId).results
+        else movieApi.getMovieTrailers(movieId).results
         Log.d("Test", "Fetched trailers: ${trailers.size}")
         return trailers
     }
 
-    override suspend fun getWatchProviders(movieId: Int, region: String): WatchProviderInfo? {
+    override suspend fun getWatchProviders(movieId: Int, region: String, isTv: Boolean): WatchProviderInfo? {
         return try {
-            val response = movieApi.getWatchProviders(movieId)
+            val response = if (isTv) movieApi.getTvWatchProviders(movieId)
+            else movieApi.getWatchProviders(movieId)
             val upperRegion = region.uppercase()
             // Prefer the user's region; fall back to US where coverage is usually present.
             val countryProviders = response.results?.get(upperRegion)
@@ -308,8 +313,8 @@ class MovieListRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getMovieCredits(movieId: Int): MovieCreditsDto {
-        return movieApi.getMovieCredits(movieId)
+    override suspend fun getMovieCredits(movieId: Int, isTv: Boolean): MovieCreditsDto {
+        return if (isTv) movieApi.getTvCredits(movieId) else movieApi.getMovieCredits(movieId)
     }
 
     override suspend fun insertReview(review: MovieReviewEntity) {
